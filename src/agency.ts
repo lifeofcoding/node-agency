@@ -1,7 +1,7 @@
 import { Agent } from "./agent";
 import { Task } from "./task";
 import { getManagerTools } from "./utils";
-import { Model } from "./modals/openai";
+import { Model } from "./models/openai";
 
 type AgencyProps = {
   agents: ReturnType<typeof Agent>[];

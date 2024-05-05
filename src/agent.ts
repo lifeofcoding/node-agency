@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { Model } from "./modals/openai";
+import { Model } from "./models/openai";
 import { getContext } from "./utils";
 type AgentProps = {
   role: string;

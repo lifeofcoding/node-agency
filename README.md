@@ -1,6 +1,21 @@
+# Node Agency
+
+⚠️ This project is in development and should not be used in Production.
+
+Inspired by CrewAI this frameworks goal is to make it easy to use nodejs to build & deploy agents.
+
+This has very basic agent capabilities, and is nowhere near as advanced as many of the other python based libraries, but this will be fun to improve, so anyone who would like to help, you are more than welcome.
+
+## Install
+
+`npm install node-agency`
+
+## Quick Start
+
+```
 import "dotenv/config";
-import { Agency, Agent, Task, Tool } from "../src/index";
-import { Model } from "../src/models/openai";
+import { Agency, Agent, Task, Tool } from "node-agency";
+import { Model } from "node-agency/models/openai";
 
 /* Create a simple tool */
 const SearchTool = async (searchTerms: string) => {
@@ -71,3 +86,10 @@ const agency = Agency({
 agency.kickoff().then((response) => {
   console.log(response);
 });
+
+```
+
+## Supported Models
+
+- OpenAI
+- More coming soon.
