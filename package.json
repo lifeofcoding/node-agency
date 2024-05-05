@@ -1,0 +1,24 @@
+{
+  "name": "node-agency",
+  "version": "0.0.1",
+  "description": "A node package for building AI agents",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc --declaration --declarationMap --sourceMap",
+    "start": "tsc-watch --onSuccess \"node dist/index.js\"",
+    "example": "npx ts-node example/index.ts"
+  },
+  "author": "Jimmy Rousseau (LifeOfCoding)",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.12.2",
+    "tsc-watch": "^6.2.0",
+    "typescript": "^5.4.3"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "openai": "^4.40.2"
+  }
+}
