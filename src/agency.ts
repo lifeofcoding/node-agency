@@ -2,6 +2,7 @@ import { Agent } from "./agent";
 import { Task } from "./task";
 import { getManagerTools } from "./utils";
 import { Model } from "./models/openai";
+import colors from "colors";
 
 type AgencyProps = {
   agents: ReturnType<typeof Agent>[];
@@ -18,12 +19,14 @@ export const Agency = function ({ agents, tasks, llm }: AgencyProps) {
   });
 
   const kickoff = async () => {
+    console.log(colors.green("Starting Agency...\n\n"));
     let output = "";
     for (const task of tasks) {
-      output += await task.execute({ agent: manager, context: output });
+      const out = await task.execute({ agent: manager, context: output });
+      output += `${out}\n-----------------\n`;
     }
 
-    return output;
+    return `\n\n-----------------\n\nFinalt Results: ${output}`;
   };
 
   return {

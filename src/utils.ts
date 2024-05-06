@@ -14,9 +14,18 @@ export const registerTool = (
 };
 
 export const callFunction = async (name: string, input: string) => {
-  const result = await tools[name](input);
-  context[name] = result;
-  return result;
+  try {
+    const result = await tools[name](input);
+    context[name] = result;
+    return result;
+  } catch (e) {
+    let message = "Unknown error";
+    if (e instanceof Error) {
+      message = e.message;
+      console.warn("Error calling function:", name, e.message);
+    }
+    return "Error calling function " + name + ": " + message;
+  }
 };
 
 export const getManagerTools = (

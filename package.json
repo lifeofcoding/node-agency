@@ -1,6 +1,6 @@
 {
   "name": "node-agency",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "A node package for building AI agents",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -22,6 +22,7 @@
     "typescript": "^5.4.3"
   },
   "dependencies": {
+    "colors": "^1.4.0",
     "dotenv": "^16.4.5",
     "openai": "^4.40.2"
   },

@@ -40,7 +40,7 @@ export class Model {
     ];
 
     try {
-      console.log("Calling GPT-3", JSON.stringify(messages, null, 2));
+      // console.log("Calling GPT-3", JSON.stringify(messages, null, 2));
       const gptResponse = await this.openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages,
@@ -67,9 +67,10 @@ export class Model {
 
           console.log(
             "Calling function:",
-            name,
+            `'${name}'`,
             "with params:",
-            JSON.parse(args)
+            JSON.parse(args),
+            "\n\n"
           );
 
           const result = await callFunction(name, args);

@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { Model } from "./models/openai";
 import { getContext } from "./utils";
+import colors from "colors";
 type AgentProps = {
   role: string;
   goal: string;
@@ -24,9 +25,35 @@ const Agent = function ({ role, goal, tools, model }: AgentProps) {
     execute: async (prompt: string) => {
       try {
         const { task, input } = JSON.parse(prompt);
-        return model.call(systemMessage, input, tools, getContext());
+        const newPrompt = `Complete the following task: ${task} Input: ${input}`;
+        console.log(
+          colors.yellow(
+            `Calling Agent '${role}' with '${systemMessage}'\nWith Input: '${newPrompt}'\n`
+          )
+        );
+        const agentResults = await model.call(
+          systemMessage,
+          newPrompt,
+          tools,
+          getContext()
+        );
+        console.log(
+          colors.green(`\nAgent '${role}' Results: ${agentResults}\n\n`)
+        );
+        return agentResults;
       } catch (error) {
-        return model.call(systemMessage, prompt, tools);
+        console.log(
+          colors.yellow(
+            `Calling Agent '${role}' with '${systemMessage}'\nWith Input: '${prompt}'\n`
+          )
+        );
+
+        const agentResults = await model.call(systemMessage, prompt, tools);
+        console.log(
+          colors.green(`\nAgent '${role}' Results: ${agentResults}\n\n`)
+        );
+
+        return agentResults;
       }
     },
   };
