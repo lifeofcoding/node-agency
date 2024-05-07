@@ -104,6 +104,7 @@ agency.kickoff().then((response) => {
 ## Road Map
 
 - [x] Initial working release
+- [x] Self-Reflection
 - [ ] Documention
 - [ ] Support Ollama Models / Open Source
 - [ ] Analytics
