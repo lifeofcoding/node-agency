@@ -1,6 +1,6 @@
 # Node Agency
 
-⚠️ This project is in development and should not be used in Production.
+⚠️ This project is in development and looking for contributors.
 
 Inspired by CrewAI this frameworks goal is to make it easy to use nodejs to build & deploy agents.
 
@@ -89,7 +89,22 @@ agency.kickoff().then((response) => {
 
 ```
 
+## Features
+
+- Hierarchy agent process
+- Asynchronous Tool/Agent Calling
+- Sharing of Context between agents
+- Easy Defining of custom tools (OpenAI model required, more support coming soon.)
+
 ## Supported Models
 
-- OpenAI
+- OpenAI (Defaults to GPT 3.5-Turbo)
 - More coming soon.
+
+## Road Map
+
+- [x] Initial working release
+- [ ] Documention
+- [ ] Support Ollama Models / Open Source
+- [ ] Analytics
+- [ ] Chain of thought / Reasoning
