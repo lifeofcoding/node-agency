@@ -16,7 +16,9 @@ export const registerTool = (
 export const callFunction = async (name: string, input: string) => {
   try {
     const result = await tools[name](input);
-    context[name] = result;
+    if (name in context) {
+      context[name] = result;
+    }
     return result;
   } catch (e) {
     let message = "Unknown error";
@@ -35,6 +37,7 @@ export const getManagerTools = (
     const toolName = agent.role.replace(/\s/g, "_").toLowerCase();
 
     registerTool(toolName, agent.execute);
+    context[toolName] = "";
 
     return {
       type: "function",
@@ -63,9 +66,11 @@ export const getManagerTools = (
 
 export const getContext = () => {
   let currentContext = "";
-  for (const key in tools) {
-    currentContext += `${key} Results: ${context[key] || "Pending..."}\n`;
+  for (const key in context) {
+    if (context[key]) {
+      currentContext += `${key} Results: ${context[key]}\n`;
+    }
   }
 
-  return "";
+  return currentContext;
 };
