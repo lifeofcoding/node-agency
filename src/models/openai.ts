@@ -11,11 +11,21 @@ export class Model {
   history: Messages = [];
   openai: OpenAI;
   selfReflected: number = 0;
-  constructor(OPENAI_API_KEY?: string) {
+  parallelToolCalls = false;
+  model: OpenAI.Chat.Completions.ChatCompletionCreateParams["model"] =
+    "gpt-3.5-turbo";
+  constructor(options?: {
+    parallelToolCalls?: boolean;
+    OPENAI_API_KEY?: string;
+    model?: OpenAI.Chat.Completions.ChatCompletionCreateParams["model"];
+  }) {
+    const { parallelToolCalls, OPENAI_API_KEY, model } = options || {};
     const openai = new OpenAI({
       apiKey: OPENAI_API_KEY || process.env.OPENAI_API_KEY,
     });
     this.openai = openai;
+    this.parallelToolCalls = parallelToolCalls || false;
+    this.model = model || this.model;
   }
   async call(
     systemMessage: string,
@@ -28,6 +38,7 @@ export class Model {
       (context
         ? "\n\nHere is further context to help you with your task:\n" + context
         : "");
+
     this.history.push(prompt);
     const messages: Messages = [
       {
@@ -48,37 +59,28 @@ export class Model {
 
       if (message.tool_calls) {
         const { tool_calls } = message;
-        const toolMessagePromises = tool_calls.map(async (tool_call) => {
-          const { name, arguments: args } = tool_call.function;
-
-          console.log(
-            Colors.yellow("Calling function:"),
-            Colors.blue(`'${name}'`),
-            "with params:",
-            JSON.parse(args),
-            "\n\n"
-          );
-
-          const result = await callFunction(name, args);
-
-          const toolMessage: Message = {
-            role: "tool",
-            tool_call_id: tool_call.id,
-            content: result,
-          };
-
-          return toolMessage;
-        });
-
-        const toolMessagesSettled = await Promise.allSettled(
-          toolMessagePromises
-        );
-
         const toolMessagesResolved: OpenAI.Chat.Completions.ChatCompletionToolMessageParam[] =
           [];
-        for (const toolMessage of toolMessagesSettled) {
-          if (toolMessage.status === "fulfilled") {
-            toolMessagesResolved.push(toolMessage.value);
+
+        if (this.parallelToolCalls) {
+          const toolMessagePromises = tool_calls.map(async (tool_call) => {
+            return this.processingToolCall(tool_call);
+          });
+
+          const toolMessagesSettled = await Promise.allSettled(
+            toolMessagePromises
+          );
+
+          for (const toolMessage of toolMessagesSettled) {
+            if (toolMessage.status === "fulfilled") {
+              toolMessagesResolved.push(toolMessage.value);
+            }
+          }
+        } else {
+          for (const tool_call of tool_calls) {
+            const toolMessage = await this.processingToolCall(tool_call);
+
+            toolMessagesResolved.push(toolMessage);
           }
         }
 
@@ -124,13 +126,37 @@ export class Model {
     }
   }
 
+  async processingToolCall(
+    tool_call: OpenAI.Chat.Completions.ChatCompletionMessageToolCall
+  ) {
+    const { name, arguments: args } = tool_call.function;
+
+    console.log(
+      Colors.yellow("Calling function:"),
+      Colors.blue(`'${name}'`),
+      "with params:",
+      JSON.parse(args),
+      "\n\n"
+    );
+
+    const result = await callFunction(name, args);
+
+    const toolMessage: Message = {
+      role: "tool",
+      tool_call_id: tool_call.id,
+      content: result,
+    };
+
+    return toolMessage;
+  }
+
   async callGPT(
     messages: Messages,
     tools?: OpenAI.Chat.Completions.ChatCompletionTool[],
     reflected: boolean = false
   ): Promise<OpenAI.Chat.Completions.ChatCompletionMessage> {
     const gptResponse = await this.openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: this.model,
       messages,
       tools: tools,
       stream: false,

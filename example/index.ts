@@ -38,6 +38,7 @@ const researcher = Agent({
   role: "Senior Research Analyst",
   goal: "Uncover cutting-edge developments in AI and data science",
   tools: [searchTool],
+  // model: new Model() // You can also pass a model here
 });
 
 const writer = Agent({
@@ -47,6 +48,7 @@ const writer = Agent({
 
 /* Create Tasks */
 const researchTask = Task({
+  // agent: researcher, // You can also pass the agent here
   expectOutput: "Full analysis report in bullet points",
   description:
     "Conduct a comprehensive analysis of the latest advancements in AI in 2024. Identify key trends, breakthrough technologies, and potential industry impacts.",
@@ -64,7 +66,11 @@ const summaryTask = Task({
 const agency = Agency({
   agents: [researcher, writer],
   tasks: [researchTask, summaryTask],
-  llm: new Model(process.env.OPENAI_API_KEY),
+  llm: new Model({
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
+    model: "gpt-3.5-turbo",
+    parallelToolCalls: true,
+  }),
 });
 
 /* Kickoff the Agency */
