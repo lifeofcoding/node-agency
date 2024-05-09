@@ -16,57 +16,34 @@ const Agent = function ({ role, goal, tools, model }: AgentProps) {
     role,
     goal,
     execute: async (prompt: string) => {
+      let newPrompt = prompt;
       try {
         const { task, input } = JSON.parse(prompt);
-        const newPrompt = `Complete the following task: ${task}\n\nHere is some context to help you:\n${input}`;
+        newPrompt = `Complete the following task: ${task}\n\nHere is some context to help you:\n${input}`;
+      } catch (e) {}
 
-        console.log(
-          colors.yellow(`Calling Agent`),
-          colors.blue(`${role}`),
-          `with`,
-          colors.blue(`'${systemMessage}'`),
-          `\nWith Input:`,
-          colors.blue(`'${newPrompt}'\n`)
-        );
-        const agentResults = await model.call(
-          systemMessage,
-          { role: "user", content: newPrompt },
-          tools,
-          getContext()
-        );
-        // model.selfReflected = 0;
-        console.log(
-          colors.yellow(`\nAgent`),
-          colors.blue(`'${role}'`),
-          `Results:\n`,
-          colors.blue(`${agentResults}\n\n`)
-        );
-        return agentResults;
-      } catch (error) {
-        console.log(
-          colors.yellow(`Calling Agent`),
-          colors.blue(`${role}`),
-          `with`,
-          colors.blue(`'${systemMessage}'`),
-          `\nWith Input:`,
-          colors.blue(`'${prompt}'\n`)
-        );
-
-        const agentResults = await model.call(
-          systemMessage,
-          { role: "user", content: prompt },
-          tools
-        );
-        // model.selfReflected = 0;
-        console.log(
-          colors.yellow(`\nAgent`),
-          colors.blue(`'${role}'`),
-          `Results:\n`,
-          colors.blue(`${agentResults}\n\n`)
-        );
-
-        return agentResults;
-      }
+      console.log(
+        colors.yellow(`Calling Agent`),
+        colors.blue(`${role}`),
+        `with`,
+        colors.blue(`'${systemMessage}'`),
+        `\nWith Input:`,
+        colors.blue(`'${newPrompt}'\n`)
+      );
+      const agentResults = await model.call(
+        systemMessage,
+        { role: "user", content: newPrompt },
+        tools,
+        getContext()
+      );
+      // model.selfReflected = 0;
+      console.log(
+        colors.yellow(`\nAgent`),
+        colors.blue(`'${role}'`),
+        `Results:\n`,
+        colors.blue(`${agentResults}\n\n`)
+      );
+      return agentResults;
     },
   };
 };
