@@ -1,6 +1,6 @@
 import { Agent } from "./agent";
 import { Task } from "./task";
 import { Tool } from "./tool";
-import { Agency } from "./agency";
+import { Agency, History } from "./agency";
 
-export { Agent, Task, Tool, Agency };
+export { Agent, Task, Tool, Agency, History };

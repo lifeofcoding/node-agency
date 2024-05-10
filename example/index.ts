@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { Agency, Agent, Task, Tool } from "../src/index";
+import { Agency, Agent, Task, Tool, History } from "../src/index";
 import { Model } from "../src/models/openai";
 
 /* Create a simple tool */
@@ -77,3 +77,42 @@ const agency = Agency({
 agency.kickoff().then((response) => {
   console.log(response);
 });
+
+/* Advance chatbot agent */
+/* With Streaming */
+/*
+agency
+  .executeStream(
+    "What are the latest AI advancements?, and what advancements are there in self-driving cars?"
+  )
+  .then(async (response) => {
+    for await (const part of response) {
+      if (part.choices[0].delta.content) {
+        process.stdout.write(part.choices[0].delta.content + "");
+      }
+    }
+  });
+*/
+/* Without Streaming */
+/*
+agency.execute("hello").then((response) => {
+  console.log(response);
+});
+*/
+
+/* With History */
+/*
+agency
+  .execute("hello", [
+    { role: "user", content: "Hello" },
+    { role: "assistant", content: "How can I help you?" },
+    { role: "user", content: "What is the largest city in Florida?" },
+    {
+      role: "assistant",
+      content: "The largest city in Florida is Jacksonville.",
+    },
+  ] as History)
+  .then((response) => {
+    console.log(response);
+  });
+*/

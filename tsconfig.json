@@ -107,7 +107,7 @@
     "skipLibCheck": true /* Skip type checking all .d.ts files. */,
     "baseUrl": "./",
     "paths": {
-      "node-agency": ["src/index.ts"]
+      // "node-agency": ["src/index.ts"]
     }
   },
   "exclude": ["example/*"]

@@ -16,14 +16,12 @@ const Task = ({ description, agent: mainAgent, expectOutput }: TaskProps) => {
       agent: ReturnType<typeof Agent>;
       context: string;
     }) => {
-      if (mainAgent) {
-        return mainAgent.execute(
-          JSON.stringify({
-            task: description,
-            input: context + `\nExpected Output: ${expectOutput}`,
-          })
-        );
+      agent = agent || mainAgent;
+
+      if (!agent) {
+        throw new Error("No agent provided");
       }
+
       return agent.execute(
         JSON.stringify({
           task: description,
