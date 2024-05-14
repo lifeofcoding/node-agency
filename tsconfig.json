@@ -110,5 +110,5 @@
       // "node-agency": ["src/index.ts"]
     }
   },
-  "exclude": ["example/*"]
+  "exclude": ["examples/*"]
 }

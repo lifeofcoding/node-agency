@@ -1,6 +1,6 @@
 import "dotenv/config";
-import { Agency, Agent, Task, Tool, History } from "../src/index";
-import { Model } from "../src/models/openai";
+import { Agency, Agent, Task, Tool, History } from "../../src/index";
+import { Model } from "../../src/models/openai";
 
 /* Create a simple tool */
 const SearchTool = async (searchTerms: string) => {
@@ -87,9 +87,7 @@ agency
   )
   .then(async (response) => {
     for await (const part of response) {
-      if (part.choices[0].delta.content) {
-        process.stdout.write(part.choices[0].delta.content + "");
-      }
+        process.stdout.write(part);
     }
   });
 */

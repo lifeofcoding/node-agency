@@ -67,13 +67,6 @@ const Agent = function ({ role, goal, tools, model }: AgentProps) {
         tools,
         getContext()
       );
-      // model.selfReflected = 0;
-      console.log(
-        colors.yellow(`\nAgent`),
-        colors.blue(`'${role}'`),
-        `Results:\n`,
-        colors.blue(`${agentResults}\n\n`)
-      );
       return agentResults;
     },
   };

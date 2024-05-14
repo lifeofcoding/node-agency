@@ -169,9 +169,7 @@ export class Model {
     prompt: Message,
     tools?: OpenAI.Chat.Completions.ChatCompletionTool[],
     context?: string
-  ): Promise<
-    AsyncIterableIterator<OpenAI.Chat.Completions.ChatCompletionChunk>
-  > {
+  ): Promise<AsyncIterableIterator<string>> {
     prompt.content =
       prompt.content +
       (context
@@ -369,8 +367,8 @@ export class Model {
               toolMessages.push(toolRequestMessage, toolMessage);
               continue;
             }
-          } else {
-            controller.enqueue(value);
+          } else if (delta.content != null) {
+            controller.enqueue(value.choices[0].delta.content);
           }
         }
 
@@ -392,8 +390,6 @@ export class Model {
       },
     });
 
-    return readableStreamAsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>(
-      stream
-    );
+    return readableStreamAsyncIterable<string>(stream);
   }
 }

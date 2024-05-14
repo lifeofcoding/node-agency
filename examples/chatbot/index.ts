@@ -1,21 +1,21 @@
-# Node Agency
-
-⚠️ This project is in development and looking for contributors.
-
-Inspired by CrewAI this frameworks goal is to make it easy to use nodejs to build & deploy agents.
-
-This has very basic agent capabilities, and is nowhere near as advanced as many of the other python based libraries, but this will be fun to improve, so anyone who would like to help, you are more than welcome.
-
-## Install
-
-`npm install node-agency`
-
-## Quick Start
-
-```
 import "dotenv/config";
-import { Agency, Agent, Task, Tool } from "node-agency";
-import { Model } from "node-agency/models/openai";
+import readline from "readline";
+import { Agency, Agent, Task, Tool, History } from "../../src/index";
+import { Model } from "../../src/models/openai";
+
+function askQuestion(query: string): Promise<string> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise((resolve) =>
+    rl.question(query, (ans) => {
+      rl.close();
+      resolve(ans);
+    })
+  );
+}
 
 /* Create a simple tool */
 const SearchTool = async (searchTerms: string) => {
@@ -88,76 +88,19 @@ const agency = Agency({
   }),
 });
 
-/* Kickoff the Agency */
-agency.kickoff().then((response) => {
-  console.log(response);
-});
-
-```
-
-## Advanced: Chatbot Functionality
-
-`With Streaming:`
-
-```
-agency
-  .executeStream(
-    "What are the latest AI advancements?, and what advancements are there in self-driving cars?"
-  )
-  .then(async (response) => {
-    for await (const part of response) {
-      process.stdout.write(part);
+const start = () =>
+  askQuestion("Input:").then((response) => {
+    if (response === "exit") {
+      process.exit(0);
     }
+    agency.executeStream(response).then(async (response) => {
+      for await (const part of response) {
+        process.stdout.write(part);
+      }
+      process.stdout.write("\n");
+
+      start();
+    });
   });
-```
 
-`Without Streaming:`
-
-```
-agency.execute("hello").then((response) => {
-  console.log(response);
-});
-```
-
-`With External History:`
-
-```
-import { History } from "node-agency"; // Import History Type
-
-...
-
-agency
-  .execute("hello", [
-    { role: "user", content: "Hello" },
-    { role: "assistant", content: "How can I help you?" },
-    { role: "user", content: "What is the largest city in Florida?" },
-    {
-      role: "assistant",
-      content: "The largest city in Florida is Jacksonville.",
-    },
-  ] as History)
-  .then((response) => {
-    console.log(response);
-  });
-```
-
-## Features
-
-- Hierarchy agent process
-- Asynchronous Tool/Agent Calling
-- Sharing of Context between agents
-- Easy Defining of custom tools (OpenAI model required, more support coming soon.)
-
-## Supported Models
-
-- OpenAI (Defaults to GPT 3.5-Turbo)
-- More coming soon.
-
-## Road Map
-
-- [x] Initial working release
-- [x] Self-Reflection
-- [ ] Documention
-- [ ] Support Ollama Models / Open Source
-- [ ] Analytics
-- [ ] Chain of thought / Reasoning
+start();
