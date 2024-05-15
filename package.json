@@ -1,6 +1,6 @@
 {
   "name": "node-agency",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "A node package for building AI agents",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
