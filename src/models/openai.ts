@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import Colors from "colors";
-import { callFunction } from "../utils";
+import { callFunction, readableStreamAsyncIterable } from "../utils";
+import { Logger } from "../logger";
 
 function isParseableJson(str: string) {
   try {
@@ -8,35 +9,6 @@ function isParseableJson(str: string) {
   } catch (e) {
     return null;
   }
-}
-
-export function readableStreamAsyncIterable<T>(
-  stream: any
-): AsyncIterableIterator<T> {
-  if (stream[Symbol.asyncIterator]) return stream;
-
-  const reader = stream.getReader();
-  return {
-    async next() {
-      try {
-        const result = await reader.read();
-        if (result?.done) reader.releaseLock(); // release lock when stream becomes closed
-        return result;
-      } catch (e) {
-        reader.releaseLock(); // release lock when stream becomes errored
-        throw e;
-      }
-    },
-    async return() {
-      const cancelPromise = reader.cancel();
-      reader.releaseLock();
-      await cancelPromise;
-      return { done: true, value: undefined };
-    },
-    [Symbol.asyncIterator]() {
-      return this;
-    },
-  };
 }
 
 type OpenAIParams =
@@ -200,13 +172,13 @@ export class Model {
   ) {
     const { name, arguments: args } = tool_call.function;
 
-    console.log(
-      Colors.yellow("Calling function:"),
-      Colors.blue(`'${name}'`),
-      "with params:",
-      JSON.parse(args),
-      "\n\n"
-    );
+    Logger({
+      type: "function",
+      payload: JSON.stringify({
+        name,
+        params: args,
+      }),
+    });
 
     const result = await callFunction(name, args);
 
@@ -239,15 +211,14 @@ export class Model {
       const { message } = reply;
 
       if (reflected && this.selfReflected >= 3) {
-        console.log(Colors.red(`Self-Reflection Limit Reached\n\n`));
+        Logger({ type: "warn", payload: "Self-Reflection Limit Reached\n\n" });
       }
 
       if (!reflected && message.content && this.selfReflected < 3) {
-        console.log(
-          Colors.blue(
-            `Self-Reflecting On Output (${this.selfReflected})...\n\n`
-          )
-        );
+        Logger({
+          type: "info",
+          payload: `Self-Reflecting On Output (${this.selfReflected})...\n\n`,
+        });
         this.selfReflected++;
         return this.callGPT(
           [
@@ -266,6 +237,7 @@ export class Model {
 
       return message;
     } catch (error) {
+      console.error(error);
       console.debug("History: ", this.history);
       throw new Error("Failed to call GPT-3");
     }
@@ -349,13 +321,13 @@ export class Model {
                 continue;
               }
 
-              console.log(
-                Colors.yellow("Calling function:"),
-                Colors.blue(`'${toolCall.function.name}'`),
-                "with params:",
-                JSON.parse(toolCall.function.arguments),
-                "\n\n"
-              );
+              Logger({
+                type: "function",
+                payload: JSON.stringify({
+                  name: toolCall.function.name,
+                  params: toolCall.function.arguments,
+                }),
+              });
 
               const toolMessage = await _this.processingToolCall(toolCall);
 

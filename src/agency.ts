@@ -1,13 +1,13 @@
 import { Agent } from "./agent";
 import { Task } from "./task";
 import { getManagerTools } from "./utils";
-import { Model } from "./models/openai";
+import { Model as OpenAIModel } from "./models/openai";
 import colors from "colors";
 
 type AgencyProps = {
   agents: ReturnType<typeof Agent>[];
   tasks: ReturnType<typeof Task>[];
-  llm: Model;
+  llm: OpenAIModel;
 };
 type UserMessage = {
   role: "user" | "assistant";
@@ -24,7 +24,6 @@ const groupIntoNChunks = (arr: any, chunkSize: number) => {
   const chunkAmount = amountPerChunk < 3 ? 3 : amountPerChunk;
   for (let i = result.length; i > 0; i--) {
     let beginPointer = (result.length - i) * chunkAmount;
-    console.log(beginPointer);
     result[result.length - i] = arr.slice(
       beginPointer,
       beginPointer + chunkAmount
@@ -61,14 +60,14 @@ export const Agency = function ({ agents, tasks, llm }: AgencyProps) {
     stream: T,
     history?: History
   ): Promise<
-    T extends true ? Awaited<ReturnType<Model["callStream"]>> : string
+    T extends true ? Awaited<ReturnType<OpenAIModel["callStream"]>> : string
   > => {
     const executeMethod = stream ? "executeStream" : "execute";
 
     if (history) {
       const newHistory = history.map((item) => {
         return { role: item.role, content: item.content };
-      }) as Model["history"];
+      }) as OpenAIModel["history"];
 
       const currentToolCalls = manager.model.history.filter(
         (item) =>
@@ -89,7 +88,7 @@ export const Agency = function ({ agents, tasks, llm }: AgencyProps) {
     }
 
     return (await manager[executeMethod](prompt)) as T extends true
-      ? Awaited<ReturnType<Model["callStream"]>>
+      ? Awaited<ReturnType<OpenAIModel["callStream"]>>
       : string;
   };
 

@@ -1,17 +1,30 @@
 import OpenAI from "openai";
-import { Model } from "./models/openai";
+import { Model as OpenAIModel } from "./models/openai";
+import { Model as OllamaModel } from "./models/ollama";
 import { getContext } from "./utils";
 import colors from "colors";
-type AgentProps = {
-  role: string;
-  goal: string;
-  tools?: OpenAI.Chat.Completions.ChatCompletionTool[];
-  model?: Model;
-};
+import { Logger } from "./logger";
+type AgentProps =
+  | {
+      role: string;
+      goal: string;
+      tools?: OpenAI.Chat.Completions.ChatCompletionTool[];
+      model?: OpenAIModel;
+    }
+  | {
+      role: string;
+      goal: string;
+      tools?: never;
+      model?: OllamaModel;
+    };
 const Agent = function ({ role, goal, tools, model }: AgentProps) {
   let systemMessage = `As a ${role}, your goal is to ${goal}.`;
 
-  model = model || new Model();
+  if (tools && model instanceof OllamaModel) {
+    throw new Error("OllamaModel cannot have tools");
+  }
+
+  model = model || new OpenAIModel();
   return {
     role,
     goal,
@@ -23,14 +36,11 @@ const Agent = function ({ role, goal, tools, model }: AgentProps) {
         newPrompt = `Complete the following task: ${task}\n\nHere is some context to help you:\n${input}`;
       } catch (e) {}
 
-      console.log(
-        colors.yellow(`Calling Agent`),
-        colors.blue(`${role}`),
-        `with`,
-        colors.blue(`'${systemMessage}'`),
-        `\nWith Input:`,
-        colors.blue(`'${newPrompt}'\n`)
-      );
+      Logger({
+        type: "agent",
+        payload: JSON.stringify({ role, systemMessage, newPrompt }),
+      });
+
       const agentResults = await model.call(
         systemMessage,
         { role: "user", content: newPrompt },
@@ -38,36 +48,36 @@ const Agent = function ({ role, goal, tools, model }: AgentProps) {
         getContext()
       );
       // model.selfReflected = 0;
-      console.log(
-        colors.yellow(`\nAgent`),
-        colors.blue(`'${role}'`),
-        `Results:\n`,
-        colors.blue(`${agentResults}\n\n`)
-      );
+
+      Logger({
+        type: "results",
+        payload: JSON.stringify({ role, agentResults }),
+      });
       return agentResults;
     },
     executeStream: async (prompt: string) => {
-      let newPrompt = prompt;
-      try {
-        const { task, input } = JSON.parse(prompt);
-        newPrompt = `Complete the following task: ${task}\n\nHere is some context to help you:\n${input}`;
-      } catch (e) {}
+      if (model instanceof OpenAIModel) {
+        let newPrompt = prompt;
+        try {
+          const { task, input } = JSON.parse(prompt);
+          newPrompt = `Complete the following task: ${task}\n\nHere is some context to help you:\n${input}`;
+        } catch (e) {}
 
-      console.log(
-        colors.yellow(`Calling Agent`),
-        colors.blue(`${role}`),
-        `with`,
-        colors.blue(`'${systemMessage}'`),
-        `\nWith Input:`,
-        colors.blue(`'${newPrompt}'\n`)
-      );
-      const agentResults = await model.callStream(
-        systemMessage,
-        { role: "user", content: newPrompt },
-        tools,
-        getContext()
-      );
-      return agentResults;
+        Logger({
+          type: "agent",
+          payload: JSON.stringify({ role, systemMessage, newPrompt }),
+        });
+
+        const agentResults = await model.callStream(
+          systemMessage,
+          { role: "user", content: newPrompt },
+          tools,
+          getContext()
+        );
+        return agentResults;
+      } else {
+        throw new Error("Model does not support streaming");
+      }
     },
   };
 };

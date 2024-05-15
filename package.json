@@ -26,6 +26,7 @@
     "start": "tsc-watch --onSuccess \"node dist/index.js\"",
     "example:quickstart": "npx ts-node examples//quickstart/index.ts",
     "example:chatbot": "npx ts-node examples/chatbot/index.ts",
+    "example:ollama": "npx ts-node examples/ollama/index.ts",
     "npm:publish": "npm publish --access public"
   },
   "author": "Jimmy Rousseau (LifeOfCoding)",
@@ -38,10 +39,12 @@
   "dependencies": {
     "colors": "^1.4.0",
     "dotenv": "^16.4.5",
+    "eventsource-parser": "^1.1.2",
     "openai": "^4.40.2"
   },
   "exports": {
     ".": "./dist/index.js",
-    "./models/openai": "./dist/models/openai.js"
+    "./models/openai": "./dist/models/openai.js",
+    "./models/ollama": "./dist/models/ollama.js"
   }
 }

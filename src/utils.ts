@@ -6,6 +6,35 @@ type Agents = ReturnType<typeof Agent>[];
 const tools: { [key: string]: (prompt: string) => Promise<string> } = {};
 const context: { [key: string]: string } = {};
 
+export function readableStreamAsyncIterable<T>(
+  stream: any
+): AsyncIterableIterator<T> {
+  if (stream[Symbol.asyncIterator]) return stream;
+
+  const reader = stream.getReader();
+  return {
+    async next() {
+      try {
+        const result = await reader.read();
+        if (result?.done) reader.releaseLock(); // release lock when stream becomes closed
+        return result;
+      } catch (e) {
+        reader.releaseLock(); // release lock when stream becomes errored
+        throw e;
+      }
+    },
+    async return() {
+      const cancelPromise = reader.cancel();
+      reader.releaseLock();
+      await cancelPromise;
+      return { done: true, value: undefined };
+    },
+    [Symbol.asyncIterator]() {
+      return this;
+    },
+  };
+}
+
 export const registerTool = (
   name: string,
   execute: (prompt: string) => Promise<string>

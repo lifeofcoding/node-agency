@@ -1,22 +1,7 @@
-# Node Agency
-
-⚠️ This project is in development and looking for contributors.
-
-Inspired by CrewAI this frameworks goal is to make it easy to use nodejs to build & deploy agents.
-
-This has very basic agent capabilities, and is nowhere near as advanced as many of the other python based libraries, but this will be fun to improve, so anyone who would like to help, you are more than welcome.
-
-## Install
-
-`npm install node-agency`
-
-## Quick Start
-
-```
 import "dotenv/config";
-import { Agency, Agent, Task, Tool } from "node-agency";
-import { Model as OpenAIModel } from "node-agency/models/openai";
-import { Model as OllamaModel } from "node-agency/models/ollama";
+import { Agency, Agent, Task, Tool, History } from "../../src/index";
+import { Model as AgentModel } from "../../src/models/ollama";
+import { Model as ManagerModel } from "../../src/models/openai";
 
 /* Create a simple tool */
 const SearchTool = async (searchTerms: string) => {
@@ -54,14 +39,13 @@ const researcher = Agent({
   role: "Senior Research Analyst",
   goal: "Uncover cutting-edge developments in AI and data science",
   tools: [searchTool],
-  // model: new OpenAIModel() // You can also pass a model here
 });
 
 const writer = Agent({
   role: "Tech Content Strategis",
   goal: "Craft compelling content on tech advancements",
-  model: new OllamaModel({
-    model: "llama3",
+  model: new AgentModel({
+    model: "llama3:8b",
   }),
 });
 
@@ -85,11 +69,7 @@ const summaryTask = Task({
 const agency = Agency({
   agents: [researcher, writer],
   tasks: [researchTask, summaryTask],
-  llm: new OpenAIModel({
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
-    model: "gpt-3.5-turbo",
-    parallelToolCalls: true,
-  }),
+  llm: new ManagerModel(),
 });
 
 /* Kickoff the Agency */
@@ -97,39 +77,28 @@ agency.kickoff().then((response) => {
   console.log(response);
 });
 
-```
-
-## Advanced: Chatbot Functionality
-
-`With Streaming:`
-
-```
+/* Advance chatbot agent */
+/* With Streaming */
+/*
 agency
   .executeStream(
     "What are the latest AI advancements?, and what advancements are there in self-driving cars?"
   )
   .then(async (response) => {
     for await (const part of response) {
-      process.stdout.write(part);
+        process.stdout.write(part);
     }
   });
-```
-
-`Without Streaming:`
-
-```
+*/
+/* Without Streaming */
+/*
 agency.execute("hello").then((response) => {
   console.log(response);
 });
-```
+*/
 
-`With External History:`
-
-```
-import { History } from "node-agency"; // Import History Type
-
-...
-
+/* With History */
+/*
 agency
   .execute("hello", [
     { role: "user", content: "Hello" },
@@ -143,28 +112,4 @@ agency
   .then((response) => {
     console.log(response);
   });
-```
-
-## Features
-
-- Hierarchy agent process
-- Asynchronous Tool/Agent Calling
-- Sharing of Context between agents
-- Easy Defining of custom tools (OpenAI model required, more support coming soon.)
-
-## Supported Models
-
-- OpenAI (Defaults to GPT 3.5-Turbo)
-- Ollama (Tools not supported yet)
-- More coming soon.
-
-## Road Map
-
-- [x] Initial working release
-- [x] Self-Reflection
-- [x] Support Ollama Models / Open Source
-- [ ] Ollama Function Calling Support
-- [ ] Groq Support
-- [ ] Documention
-- [ ] Analytics
-- [ ] Chain of thought / Reasoning
+*/
