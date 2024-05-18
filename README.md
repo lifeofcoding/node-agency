@@ -17,7 +17,7 @@ This has very basic agent capabilities, and is nowhere near as advanced as many 
 - Sharing of Context between agents
 - Short Term Memory (RAG)
 - Task delegation and communication between agents
-- Eaily add PDF's & websites as resources
+- Easily add PDF's & websites as resources
 - Easy Defining of custom tools (OpenAI model required, more support coming soon.)
 
 ## Quick Start
@@ -109,7 +109,7 @@ agency.kickoff().then((response) => {
 
 ```
 
-## Add Websites & PDFs as resources
+## Add RAG Knowledge with Resources
 
 ```
 const agency = Agency({
@@ -117,6 +117,7 @@ const agency = Agency({
   tasks: [researchTask, summaryTask],
   resources: [
     "https://www.wbu.edu/academics/writing-center/documents/Converting%20Google%20and%20Word%20Docs.pdf",
+    "https://react.dev/reference/react",
   ],
   memory: true, // memory required for resources
   llm: new Model({
@@ -127,7 +128,7 @@ const agency = Agency({
 });
 ```
 
-## Short Term Memory (RAG) between agents & learn over time with long term memory
+## Memory (Short-term)
 
 ```
 const agency = Agency({
