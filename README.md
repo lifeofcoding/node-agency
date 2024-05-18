@@ -109,6 +109,22 @@ agency.kickoff().then((response) => {
 
 ```
 
+## Seqential Process
+
+```
+const agency = Agency({
+  agents: [researcher, writer],
+  tasks: [researchTask, summaryTask],
+  llm: new Model({
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
+    model: "gpt-3.5-turbo",
+    parallelToolCalls: true,
+  }),
+  process: "sequential",
+  memory: true,
+});
+```
+
 ## Add RAG Knowledge with Resources
 
 ```
