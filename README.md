@@ -10,6 +10,16 @@ This has very basic agent capabilities, and is nowhere near as advanced as many 
 
 `npm install node-agency`
 
+## Features
+
+- Hierarchy & Seqential agent process
+- Asynchronous Tool Calling
+- Sharing of Context between agents
+- Short Term Memory (RAG)
+- Task delegation and communication between agents
+- Eaily add PDF's & websites as resources
+- Easy Defining of custom tools (OpenAI model required, more support coming soon.)
+
 ## Quick Start
 
 ```
@@ -177,16 +187,6 @@ agency
     console.log(response);
   });
 ```
-
-## Features
-
-- Hierarchy & Seqential agent process
-- Asynchronous Tool Calling
-- Sharing of Context between agents
-- Short Term Memory (RAG)
-- Task delegation and communication between agents
-- Eaily add PDF's & websites as resources
-- Easy Defining of custom tools (OpenAI model required, more support coming soon.)
 
 ## Supported Models
 
