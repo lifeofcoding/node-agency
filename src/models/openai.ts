@@ -49,6 +49,10 @@ export class Model {
         ? "\n\nHere is further context to help you with your task:\n" + context
         : "");
 
+    // console.log("-----------------");
+    // console.log("Prompt: ", prompt);
+    // console.log("-----------------");
+
     this.history.push(prompt);
     const messages: Messages = [
       {
@@ -68,12 +72,31 @@ export class Model {
       });
 
       if (message.tool_calls) {
+        if (message.content) {
+          Logger({
+            type: "info",
+            payload: "\n\n" + message.content + "\n\n",
+          });
+        }
         const { tool_calls } = message;
         const toolMessagesResolved: OpenAI.Chat.Completions.ChatCompletionToolMessageParam[] =
           [];
 
+        const coWorkerCalls = tool_calls.filter((tool_call) => {
+          return (
+            tool_call.function.name === "delegate_task" ||
+            tool_call.function.name === "ask_question"
+          );
+        });
+
         if (this.parallelToolCalls && !this.isManager) {
-          const toolMessagePromises = tool_calls.map(async (tool_call) => {
+          const filteredCalls = tool_calls.filter((tool_call) => {
+            return (
+              tool_call.function.name !== "delegate_task" &&
+              tool_call.function.name !== "ask_question"
+            );
+          });
+          const toolMessagePromises = filteredCalls.map(async (tool_call) => {
             return this.processingToolCall(tool_call);
           });
 
@@ -85,6 +108,12 @@ export class Model {
             if (toolMessage.status === "fulfilled") {
               toolMessagesResolved.push(toolMessage.value);
             }
+          }
+
+          for (const tool_call of coWorkerCalls) {
+            const toolMessage = await this.processingToolCall(tool_call);
+
+            toolMessagesResolved.push(toolMessage);
           }
         } else {
           for (const tool_call of tool_calls) {
@@ -214,7 +243,12 @@ export class Model {
         Logger({ type: "warn", payload: "Self-Reflection Limit Reached\n\n" });
       }
 
-      if (!reflected && message.content && this.selfReflected < 3) {
+      if (
+        !reflected &&
+        message.content &&
+        this.selfReflected < 3 &&
+        !message.tool_calls
+      ) {
         Logger({
           type: "info",
           payload: `Self-Reflecting On Output (${this.selfReflected})...\n\n`,

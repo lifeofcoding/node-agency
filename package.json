@@ -27,19 +27,23 @@
     "example:quickstart": "npx ts-node examples//quickstart/index.ts",
     "example:chatbot": "npx ts-node examples/chatbot/index.ts",
     "example:ollama": "npx ts-node examples/ollama/index.ts",
+    "example:sequential": "npx ts-node examples/sequential/index.ts",
     "npm:publish": "npm publish --access public"
   },
   "author": "Jimmy Rousseau (LifeOfCoding)",
   "license": "ISC",
   "devDependencies": {
     "@types/node": "^20.12.2",
+    "@types/pdf-parse": "^1.1.4",
     "tsc-watch": "^6.2.0",
     "typescript": "^5.4.3"
   },
   "dependencies": {
     "colors": "^1.4.0",
     "dotenv": "^16.4.5",
-    "openai": "^4.40.2"
+    "ml-distance": "^4.0.1",
+    "openai": "^4.40.2",
+    "pdf-parse": "^1.1.1"
   },
   "exports": {
     ".": "./dist/index.js",

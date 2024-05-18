@@ -99,6 +99,39 @@ agency.kickoff().then((response) => {
 
 ```
 
+## Add Websites & PDFs as resources
+
+```
+const agency = Agency({
+  agents: [researcher, writer],
+  tasks: [researchTask, summaryTask],
+  resources: [
+    "https://www.wbu.edu/academics/writing-center/documents/Converting%20Google%20and%20Word%20Docs.pdf",
+  ],
+  memory: true, // memory required for resources
+  llm: new Model({
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
+    model: "gpt-3.5-turbo",
+    parallelToolCalls: true,
+  }),
+});
+```
+
+## Short Term Memory (RAG) between agents & learn over time with long term memory
+
+```
+const agency = Agency({
+  agents: [researcher, writer],
+  tasks: [researchTask, summaryTask],
+  memory: true,
+  llm: new Model({
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
+    model: "gpt-3.5-turbo",
+    parallelToolCalls: true,
+  }),
+});
+```
+
 ## Advanced: Chatbot Functionality
 
 `With Streaming:`
@@ -147,9 +180,12 @@ agency
 
 ## Features
 
-- Hierarchy agent process
-- Asynchronous Tool/Agent Calling
+- Hierarchy & Seqential agent process
+- Asynchronous Tool Calling
 - Sharing of Context between agents
+- Short Term Memory (RAG)
+- Task delegation and communication between agents
+- Eaily add PDF's & websites as resources
 - Easy Defining of custom tools (OpenAI model required, more support coming soon.)
 
 ## Supported Models
@@ -163,6 +199,10 @@ agency
 - [x] Initial working release
 - [x] Self-Reflection
 - [x] Support Ollama Models / Open Source
+- [x] Short term memory (RAG)
+- [x] Chatbot RAG support
+- [ ] Allow connecting to external vector store databases (Pinecone, Postgres, Supabase)
+- [ ] Long-term memory (SQLlite)
 - [ ] Ollama Function Calling Support
 - [ ] Groq Support
 - [ ] Documention

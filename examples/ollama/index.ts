@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { Agency, Agent, Task, Tool, History } from "../../src/index";
+import { Agency, Agent, Task, Tool } from "../../src/index";
 import { Model as AgentModel } from "../../src/models/ollama";
 import { Model as ManagerModel } from "../../src/models/openai";
 
@@ -7,12 +7,26 @@ import { Model as ManagerModel } from "../../src/models/openai";
 const SearchTool = async (searchTerms: string) => {
   console.log("Searching for AI advancements related to:", searchTerms);
   return JSON.stringify([
-    { id: 1, name: "Google Scholar", url: "https://scholar.google.com/" },
-    { id: 2, name: "ArXiv", url: "https://arxiv.org/" },
+    {
+      id: 1,
+      name: "Google Scholar",
+      url: "https://scholar.google.com/",
+      content:
+        "The latest OpenAI Sora Model shocks the internet with its capabilities. The model is capable of generating human-like video with minimal prompts. The model is expected to revolutionize the field of AI and video. The model is available on the OpenAI API.",
+    },
+    {
+      id: 2,
+      name: "ArXiv",
+      url: "https://arxiv.org/",
+      content:
+        "The latest Google release Gemini Pro 1.5 have 2 million token context window. They also release vemo for video generation that outputs 1080p long form video.",
+    },
     {
       id: 3,
       name: "Semantic Scholar",
       url: "https://www.semanticscholar.org/",
+      content:
+        "The latest advancements in AI include the release of the OpenAI Sora Model and the Google Gemini Pro 1.5. As well as new ChatGPTo multimodel from OpenAI. That can reason across multiple modalities.",
     },
   ]);
 };
@@ -76,40 +90,3 @@ const agency = Agency({
 agency.kickoff().then((response) => {
   console.log(response);
 });
-
-/* Advance chatbot agent */
-/* With Streaming */
-/*
-agency
-  .executeStream(
-    "What are the latest AI advancements?, and what advancements are there in self-driving cars?"
-  )
-  .then(async (response) => {
-    for await (const part of response) {
-        process.stdout.write(part);
-    }
-  });
-*/
-/* Without Streaming */
-/*
-agency.execute("hello").then((response) => {
-  console.log(response);
-});
-*/
-
-/* With History */
-/*
-agency
-  .execute("hello", [
-    { role: "user", content: "Hello" },
-    { role: "assistant", content: "How can I help you?" },
-    { role: "user", content: "What is the largest city in Florida?" },
-    {
-      role: "assistant",
-      content: "The largest city in Florida is Jacksonville.",
-    },
-  ] as History)
-  .then((response) => {
-    console.log(response);
-  });
-*/

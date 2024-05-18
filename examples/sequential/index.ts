@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { Agency, Agent, Task, Tool, History } from "../../src/index";
+import { Agency, Agent, Task, Tool } from "../../src/index";
 import { Model } from "../../src/models/openai";
 
 /* Create a simple tool */
@@ -62,13 +62,14 @@ const writer = Agent({
 
 /* Create Tasks */
 const researchTask = Task({
-  // agent: researcher, // You can also pass the agent here
+  agent: researcher, // You can also pass the agent here
   expectOutput: "Full analysis report in bullet points",
   description:
     "Conduct a comprehensive analysis of the latest advancements in AI in 2024. Identify key trends, breakthrough technologies, and potential industry impacts.",
 });
 
 const summaryTask = Task({
+  agent: writer,
   expectOutput: "Full blog post of at least 4 paragraphs",
   description: `Using the insights provided, develop an engaging blog
   post that highlights the most significant AI advancements.
@@ -85,46 +86,11 @@ const agency = Agency({
     model: "gpt-3.5-turbo",
     parallelToolCalls: true,
   }),
+  process: "sequential",
+  memory: true,
 });
 
 /* Kickoff the Agency */
 agency.kickoff().then((response) => {
   console.log(response);
 });
-
-/* Advance chatbot agent */
-/* With Streaming */
-/*
-agency
-  .executeStream(
-    "What are the latest AI advancements?, and what advancements are there in self-driving cars?"
-  )
-  .then(async (response) => {
-    for await (const part of response) {
-        process.stdout.write(part);
-    }
-  });
-*/
-/* Without Streaming */
-/*
-agency.execute("hello").then((response) => {
-  console.log(response);
-});
-*/
-
-/* With History */
-/*
-agency
-  .execute("hello", [
-    { role: "user", content: "Hello" },
-    { role: "assistant", content: "How can I help you?" },
-    { role: "user", content: "What is the largest city in Florida?" },
-    {
-      role: "assistant",
-      content: "The largest city in Florida is Jacksonville.",
-    },
-  ] as History)
-  .then((response) => {
-    console.log(response);
-  });
-*/

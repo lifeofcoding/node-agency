@@ -1,4 +1,6 @@
 import { Agent } from "./agent";
+import OpenAI from "openai";
+import { VectorStore } from "./utils";
 type TaskProps = {
   description: string;
   agent?: ReturnType<typeof Agent>;
@@ -12,9 +14,11 @@ const Task = ({ description, agent: mainAgent, expectOutput }: TaskProps) => {
     execute: async ({
       agent,
       context,
+      tools,
     }: {
-      agent: ReturnType<typeof Agent>;
+      agent?: ReturnType<typeof Agent>;
       context: string;
+      tools?: OpenAI.Chat.Completions.ChatCompletionTool[];
     }) => {
       agent = agent || mainAgent;
 
@@ -26,7 +30,8 @@ const Task = ({ description, agent: mainAgent, expectOutput }: TaskProps) => {
         JSON.stringify({
           task: description,
           input: context + `\nExpected Output: ${expectOutput}`,
-        })
+        }),
+        tools
       );
     },
   };

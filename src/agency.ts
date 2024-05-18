@@ -1,14 +1,31 @@
 import { Agent } from "./agent";
 import { Task } from "./task";
-import { getManagerTools } from "./utils";
+import {
+  getManagerTools,
+  getCoworkerTools,
+  VectorStore,
+  getEmbeddings,
+  getContent,
+} from "./utils";
 import { Model as OpenAIModel } from "./models/openai";
 import colors from "colors";
+
+type MemoryTrue = { memory: true };
+type MemoryFalse = { memory: false };
+type MemoryNotSet = { memory?: undefined };
 
 type AgencyProps = {
   agents: ReturnType<typeof Agent>[];
   tasks: ReturnType<typeof Task>[];
   llm: OpenAIModel;
-};
+  process?: "sequential" | "hierarchical";
+  memory?: boolean;
+} & (
+  | (MemoryTrue & { resources?: string[] })
+  | (MemoryFalse & { resources?: never })
+  | (MemoryNotSet & { resources?: never })
+);
+
 type UserMessage = {
   role: "user" | "assistant";
   content: string;
@@ -32,27 +49,100 @@ const groupIntoNChunks = (arr: any, chunkSize: number) => {
   return result;
 };
 
-export const Agency = function ({ agents, tasks, llm }: AgencyProps) {
-  llm.isManager = true;
+export const Agency = function ({
+  agents,
+  tasks,
+  llm,
+  process = "hierarchical",
+  memory = false,
+  resources,
+}: AgencyProps) {
+  let manager: ReturnType<typeof Agent> | undefined;
+  let store: ReturnType<typeof VectorStore> | undefined;
 
-  const manager = Agent({
-    role: "Supervising Manager",
-    goal: "Complete the task",
-    tools: getManagerTools(agents),
-    model: llm,
-  });
+  if (memory) {
+    store = VectorStore();
+  }
+
+  if (llm && process === "hierarchical") {
+    llm.isManager = true;
+
+    manager = Agent({
+      role: "Supervising Manager",
+      goal: "Complete the task with the of agents, delegating tasks as needed. Please use the results from the agent to come up with the final output.",
+      tools: getManagerTools(agents),
+      model: llm,
+    });
+
+    if (store) {
+      manager.memory(store);
+    }
+  } else {
+    manager = undefined;
+  }
+
+  if (store) {
+    agents.forEach((agent) => agent.memory(store));
+  }
+
+  if (resources && !store) {
+    throw new Error(
+      "Resources can only be used with memory enabled. Please enable memory to use resources."
+    );
+  }
+
+  if (resources && store) {
+    resources.forEach(async (resource) => {
+      if (store) {
+        const resourceContent = await getContent(resource);
+
+        for (const content of resourceContent) {
+          const embeddings = await getEmbeddings(content);
+          const emb = embeddings.data.map((e) => e.embedding);
+          store.addVectors(emb, [
+            {
+              pageContent: content,
+              metadata: {
+                type: "resource",
+                tags: [resource],
+              },
+            },
+          ]);
+        }
+      }
+    });
+  }
 
   const kickoff = async () => {
     console.log(colors.green("Starting Agency...\n\n"));
-    let output = "";
+    let context = "";
+    let finalOutput = "";
+    const startTime = new Date().getTime();
     for (const task of tasks) {
-      const out = await task.execute({ agent: manager, context: output });
-      output += `${out}\n-----------------\n`;
+      const coworkerTools = getCoworkerTools(
+        agents.filter((agent) => agent.role !== task.agent?.role)
+      );
+      const out = await task.execute({
+        agent: manager,
+        context,
+        tools: process !== "hierarchical" ? coworkerTools : undefined,
+      });
+      if (memory) {
+        // TODO: store in longterm memory using sqlite
+      }
+      context += `${out}\n-----------------\n`;
+      finalOutput = out;
     }
+    const endTime = new Date().getTime();
+
+    const runTime = endTime - startTime;
+    const formattedRunTime = `${Math.floor(
+      runTime / 60000
+    )} minutes and ${Math.floor((runTime % 60000) / 1000)} seconds`;
 
     console.log(colors.green("\nAgency Completed!\n\n"));
 
-    return `\n\n-----------------\n\nFinalt Results: ${output}`;
+    return `\n\n-----------------\n\nFinalt Results: ${finalOutput}\n\n-----------------\n\nRun time: ${formattedRunTime}\n\n-----------------\n\n`;
   };
 
   const run = async <T extends boolean>(
@@ -62,6 +152,11 @@ export const Agency = function ({ agents, tasks, llm }: AgencyProps) {
   ): Promise<
     T extends true ? Awaited<ReturnType<OpenAIModel["callStream"]>> : string
   > => {
+    if (!manager) {
+      throw new Error(
+        "Manager is not defined. Please provide a manager model to run the agency in chatbot mode."
+      );
+    }
     const executeMethod = stream ? "executeStream" : "execute";
 
     if (history) {

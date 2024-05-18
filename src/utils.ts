@@ -1,10 +1,200 @@
 import OpenAI from "openai";
+import { similarity as ml_distance_similarity } from "ml-distance";
 import { Agent } from "./agent";
+import PDF from "pdf-parse";
 
 type Agents = ReturnType<typeof Agent>[];
 
 const tools: { [key: string]: (prompt: string) => Promise<string> } = {};
 const context: { [key: string]: string } = {};
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+export const getEmbeddings = async (content: string) => {
+  const embedding = await openai.embeddings.create({
+    model: "text-embedding-3-small",
+    input: content,
+    encoding_format: "float",
+  });
+
+  return embedding;
+};
+
+const totalPages: string[] = [];
+const pages: string[] = [];
+
+const isValidLink = (link: string) => {
+  return (
+    !link.includes(".css") &&
+    !link.includes(".js") &&
+    !link.includes(".png") &&
+    !link.includes(".jpg") &&
+    !link.includes(".jpeg") &&
+    !link.includes(".gif") &&
+    !link.includes(".svg") &&
+    !link.includes(".ico") &&
+    !link.includes(".xml") &&
+    !link.includes(".json")
+  );
+};
+
+const crawlWebsite = async (
+  url: string,
+  depth: number,
+  currentDepth = 0
+): Promise<string[]> => {
+  try {
+    const response = await fetch(url);
+    const content = await response.text();
+    const body = content
+      .match(/<body[^>]*>[\s\S]*<\/body>/gi)
+      ?.map((b) => b)[0]!;
+    const links = content.match(/href="([^"]*)"/g);
+    const newPages =
+      links
+        ?.map((link) => link.replace('href="', "").replace('"', ""))
+        .filter((link) => isValidLink(link)) || [];
+
+    if (newPages) {
+      totalPages.push(...newPages);
+    }
+
+    pages.push(onlyAplhaNumeric(stripHtml(body)));
+
+    if (currentDepth >= depth) {
+      return pages;
+    }
+
+    const nextPage = totalPages.shift();
+
+    if (!nextPage) {
+      return pages;
+    }
+    return crawlWebsite(nextPage, depth, currentDepth + 1);
+  } catch (e) {
+    const nextPage = totalPages.shift();
+
+    if (!nextPage) {
+      return pages;
+    }
+    return crawlWebsite(nextPage, depth, currentDepth + 1);
+  }
+};
+
+const isPDF = (url: string) => url.endsWith(".pdf");
+const stripHtml = (html: string) => html.replace(/<[^>]*>?/gm, " ");
+const onlyAplhaNumeric = (text: string) => text.replace(/[^a-zA-Z0-9 ]/g, " ");
+const chunkText = (text: string, chunkSize: number) => {
+  const chunks: string[] = [];
+  const words = text
+    .replace(/\n/g, "")
+    .split(" ")
+    .filter((w) => w.length > 0);
+  let currentChunk = "";
+  for (let i = 0; i < words.length; i++) {
+    if (currentChunk.length + 1 + words[i].length < chunkSize) {
+      if (currentChunk.length > 0) {
+        currentChunk += " ";
+      }
+      currentChunk += words[i];
+    } else {
+      chunks.push(currentChunk);
+      currentChunk = "";
+
+      if (i < words.length) {
+        currentChunk = words[i];
+      }
+    }
+  }
+
+  return chunks;
+};
+
+export const getContent = async (url: string) => {
+  if (isPDF(url)) {
+    const pdf = await fetch(url);
+    const pdfBuffer = await pdf.arrayBuffer();
+    const buffer = Buffer.from(pdfBuffer);
+    const pdfText = await PDF(buffer);
+    const chunks = chunkText(pdfText.text, 500);
+    return chunks;
+  }
+
+  const pages = await crawlWebsite(url, 10);
+
+  const chunks = chunkText(pages.join(" "), 800);
+
+  return chunks;
+};
+
+interface MemoryVector {
+  content: string;
+  embedding: number[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  metadata: Record<string, any>;
+}
+
+export function VectorStore() {
+  let memoryVectors: MemoryVector[] = [];
+  const similaritySearchVectorWithScore = (query: number[], k: number) => {
+    const similarity = ml_distance_similarity.cosine;
+
+    const filter = (doc: {
+      metadata: Record<string, any>;
+      pageContent: string;
+    }) => true;
+
+    const filterFunction = (memoryVector: MemoryVector) => {
+      if (!filter) {
+        return true;
+      }
+      const doc = {
+        metadata: memoryVector.metadata,
+        pageContent: memoryVector.content,
+      };
+      return filter(doc);
+    };
+    const filteredMemoryVectors = memoryVectors.filter(filterFunction);
+    const searches = filteredMemoryVectors
+      .map((vector, index) => ({
+        similarity: similarity(query, vector.embedding),
+        index,
+      }))
+      .sort((a, b) => (a.similarity > b.similarity ? -1 : 0))
+      .slice(0, k);
+
+    const result: [
+      { metadata: Record<string, any>; pageContent: string },
+      number
+    ][] = searches.map((search) => [
+      {
+        metadata: filteredMemoryVectors[search.index].metadata,
+        pageContent: filteredMemoryVectors[search.index].content,
+      },
+      search.similarity,
+    ]);
+
+    return result;
+  };
+
+  return {
+    addVectors: (
+      vectors: number[][],
+      documents: { pageContent: string; metadata: Record<string, any> }[]
+    ) => {
+      const memory = vectors.map((embedding, idx) => ({
+        content: documents[idx].pageContent,
+        embedding,
+        metadata: documents[idx].metadata,
+      }));
+
+      memoryVectors = memoryVectors.concat(memory);
+    },
+    similaritySearchVectorWithScore,
+  };
+}
 
 export function readableStreamAsyncIterable<T>(
   stream: any
@@ -57,6 +247,117 @@ export const callFunction = async (name: string, input: string) => {
     }
     return "Error calling function " + name + ": " + message;
   }
+};
+
+export const getCoworkerTools = (
+  agents: Agents
+): OpenAI.Chat.Completions.ChatCompletionTool[] => {
+  const tools = [
+    {
+      type: "function",
+      function: {
+        name: "ask_question",
+        description: `Ask a specific question to one of the following co-workers: ${agents
+          .map((a) => `"${a.role.replace(/\s/g, "_").toLowerCase()}"`)
+          .join(
+            ","
+          )}\nThe input to this tool should be the co-worker, the question you have for them, and ALL necessary context to ask the question properly, they know nothing about the question, so share absolute everything you know, don't reference things but instead explain them.`,
+        parameters: {
+          type: "object",
+          properties: {
+            question: {
+              type: "string",
+              description: "The question to ask the coworker",
+            },
+            coworker: {
+              type: "string",
+              description: "The coworker to ask the question to",
+            },
+            context: {
+              type: "string",
+              description: "Any required context for the coworker",
+            },
+          },
+          required: ["question", "coworker", "context"],
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: "delegate_task",
+        description: `Delegate a specific task to one of the following co-workers: ${agents
+          .map((a) => `"${a.role.replace(/\s/g, "_").toLowerCase()}"`)
+          .join(
+            ","
+          )}\nThe input to this tool should be the co-worker, the task you want them to do, and ALL necessary context to execute the task, they know nothing about the task, so share absolute everything you know, don't reference things but instead explain them.`,
+        parameters: {
+          type: "object",
+          properties: {
+            task: {
+              type: "string",
+              description: "The task to delegate to the coworker",
+            },
+            coworker: {
+              type: "string",
+              description: "The coworker to delegate task to",
+            },
+            context: {
+              type: "string",
+              description: "Any required context for the coworker",
+            },
+          },
+          required: ["task", "coworker", "context"],
+        },
+      },
+    },
+  ];
+
+  registerTool("ask_question", async (prompt) => {
+    try {
+      const { question, coworker, context } = JSON.parse(prompt);
+      const coworkerAgent = agents.find(
+        (a) => a.role.replace(/\s/g, "_").toLowerCase() === coworker
+      );
+      if (!coworkerAgent) {
+        throw new Error(`Could not find coworker with role: ${coworker}`);
+      }
+      return await coworkerAgent.execute(
+        JSON.stringify({
+          task: `Answer the following question: ${question}`,
+          input: context,
+        })
+      );
+    } catch (e) {
+      console.warn("Error calling ask_question", e);
+      if (e instanceof Error) return "Error calling ask_question: " + e.message;
+      return "Error calling ask_question";
+    }
+  });
+  registerTool("delegate_task", async (prompt) => {
+    try {
+      const { task: delegateTask, coworker, context } = JSON.parse(prompt);
+      const coworkerAgent = agents.find(
+        (a) => a.role.replace(/\s/g, "_").toLowerCase() === coworker
+      );
+      if (!coworkerAgent) {
+        throw new Error(`Could not find coworker with role: ${coworker}`);
+      }
+      return await coworkerAgent.execute(
+        JSON.stringify({
+          task: delegateTask,
+          input: context,
+        })
+      );
+    } catch (e) {
+      console.warn("Error calling delegate_task", e);
+      if (e instanceof Error)
+        return "Error calling delegate_task: " + e.message;
+      return "Error calling delegate_task";
+    }
+  });
+
+  return tools as OpenAI.Chat.Completions.ChatCompletionTool[];
 };
 
 export const getManagerTools = (
