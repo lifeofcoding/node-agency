@@ -394,6 +394,28 @@ export const getManagerTools = (
   });
 };
 
+export const generateOutput = (
+  finalOutput: string,
+  formattedRunTime: string
+) => {
+  return `\n\n-----------------\n\nFinalt Results: ${finalOutput}\n\n-----------------\n\nRun time: ${formattedRunTime}\n\n-----------------\n\n`;
+};
+
+export const groupIntoNChunks = (arr: any, chunkSize: number) => {
+  const result = new Array(chunkSize).fill([]);
+  const amountPerChunk = arr.length / chunkSize;
+
+  const chunkAmount = amountPerChunk < 3 ? 3 : amountPerChunk;
+  for (let i = result.length; i > 0; i--) {
+    let beginPointer = (result.length - i) * chunkAmount;
+    result[result.length - i] = arr.slice(
+      beginPointer,
+      beginPointer + chunkAmount
+    );
+  }
+  return result;
+};
+
 export const getContext = () => {
   let currentContext = "";
   for (const key in context) {

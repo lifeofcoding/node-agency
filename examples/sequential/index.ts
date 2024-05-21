@@ -88,6 +88,7 @@ const agency = Agency({
   }),
   process: "sequential",
   memory: true,
+  outFile: "./output.txt",
 });
 
 /* Kickoff the Agency */

@@ -80,11 +80,13 @@ const summaryTask = Task({
 const agency = Agency({
   agents: [researcher, writer],
   tasks: [researchTask, summaryTask],
+  memory: true,
   llm: new Model({
     OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
     model: "gpt-3.5-turbo",
     parallelToolCalls: true,
   }),
+  outFile: "output.txt",
 });
 
 /* Kickoff the Agency */

@@ -46,12 +46,14 @@ export class Model {
     prompt.content =
       prompt.content +
       (context
-        ? "\n\nHere is further context to help you with your task:\n" + context
+        ? "\n\n## This is results from your coworkers to help you with your task:\n" +
+          context
         : "");
 
     // console.log("-----------------");
-    // console.log("Prompt: ", prompt);
+    // console.log("Prompt: ", prompt.content);
     // console.log("-----------------");
+    // debugger;
 
     this.history.push(prompt);
     const messages: Messages = [
@@ -157,6 +159,32 @@ export class Model {
 
         return this.call(systemMessage, lastMessage, tools);
       }
+
+      // if (message.content && !message.content.includes("<CONTINUE>")) {
+      //   const maxRuntime = new Date().getTime() + 1000 * 60 * 5;
+      //   let currentTime = new Date().getTime();
+      //   let currentStep = "plan";
+
+      //   while (currentStep === "plan" && currentTime < maxRuntime) {
+      //     const plan = await this.call(
+      //       systemMessage,
+      //       {
+      //         role: "user",
+      //         content:
+      //           "Plan your next steps, when you are ready, if there are no more steps to take then indicate you are done with <CONTINUE> at the very end of your response.",
+      //       },
+      //       tools
+      //     );
+
+      //     if (!plan.includes("<CONTINUE>")) {
+      //       message.content = plan;
+      //       currentTime = new Date().getTime();
+      //     } else {
+      //       message.content = plan.replace("<CONTINUE>", "");
+      //       currentStep = "execute";
+      //     }
+      //   }
+      // }
 
       return message.content || "Unknown Error Occurred, Please try again.";
     } catch (error) {

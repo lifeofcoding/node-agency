@@ -44,7 +44,10 @@ const Agent = function ({ role, goal, tools, model }: AgentProps) {
       try {
         const { task, input } = JSON.parse(prompt);
         currentTask = `${task}`;
-        newPrompt = `Complete the following task: ${task}\n\nHere is some context to help you:\n${input}`;
+        newPrompt = `Complete the following task: ${task}\n\n## Here is some context to help you with your task:\n${input}`;
+
+        // attach planning prompt
+        newPrompt += `\n\n## Please start by planning your approach to the task, and the next steps your should take. If all steps have been completed, please indicate that you are done.`;
       } catch (e) {}
 
       Logger({
@@ -76,7 +79,7 @@ const Agent = function ({ role, goal, tools, model }: AgentProps) {
         }
 
         newPrompt += hist.length
-          ? "\n\nPrevious History:\n\n" + hist.join("\n\n")
+          ? "\n\n## Previous History:\n\n" + hist.join("\n\n")
           : "";
       }
 

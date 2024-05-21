@@ -6,9 +6,12 @@ import {
   VectorStore,
   getEmbeddings,
   getContent,
+  groupIntoNChunks,
+  generateOutput,
 } from "./utils";
 import { Model as OpenAIModel } from "./models/openai";
 import colors from "colors";
+import fs from "fs";
 
 type MemoryTrue = { memory: true };
 type MemoryFalse = { memory: false };
@@ -20,6 +23,7 @@ type AgencyProps = {
   llm: OpenAIModel;
   process?: "sequential" | "hierarchical";
   memory?: boolean;
+  outFile?: string;
 } & (
   | (MemoryTrue & { resources?: string[] })
   | (MemoryFalse & { resources?: never })
@@ -34,21 +38,6 @@ type UserMessage = {
 type HistoryItem = UserMessage;
 export type History = HistoryItem[];
 
-const groupIntoNChunks = (arr: any, chunkSize: number) => {
-  const result = new Array(chunkSize).fill([]);
-  const amountPerChunk = arr.length / chunkSize;
-
-  const chunkAmount = amountPerChunk < 3 ? 3 : amountPerChunk;
-  for (let i = result.length; i > 0; i--) {
-    let beginPointer = (result.length - i) * chunkAmount;
-    result[result.length - i] = arr.slice(
-      beginPointer,
-      beginPointer + chunkAmount
-    );
-  }
-  return result;
-};
-
 export const Agency = function ({
   agents,
   tasks,
@@ -56,6 +45,7 @@ export const Agency = function ({
   process = "hierarchical",
   memory = false,
   resources,
+  outFile,
 }: AgencyProps) {
   let manager: ReturnType<typeof Agent> | undefined;
   let store: ReturnType<typeof VectorStore> | undefined;
@@ -69,7 +59,7 @@ export const Agency = function ({
 
     manager = Agent({
       role: "Supervising Manager",
-      goal: "Complete the task with the of agents, delegating tasks as needed. Please use the results from the agent to come up with the final output.",
+      goal: "Complete the task with the of agents, delegating tasks as needed. Please use the results from the agent to come up with the final curated result output.",
       tools: getManagerTools(agents),
       model: llm,
     });
@@ -142,7 +132,28 @@ export const Agency = function ({
 
     console.log(colors.green("\nAgency Completed!\n\n"));
 
-    return `\n\n-----------------\n\nFinalt Results: ${finalOutput}\n\n-----------------\n\nRun time: ${formattedRunTime}\n\n-----------------\n\n`;
+    if (outFile) {
+      console.log(colors.green(`Writing results to file: ${outFile}`));
+
+      // delete file if exists
+      if (fs.existsSync(outFile)) {
+        fs.unlinkSync(outFile);
+      }
+
+      // create directory if not exists
+      const paths = outFile.split("/");
+
+      if (paths.length > 1) {
+        const dir = paths.slice(0, paths.length - 1).join("/");
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+        }
+      }
+      // write to file
+      fs.writeFileSync(outFile, finalOutput, "utf-8");
+    }
+
+    return generateOutput(finalOutput, formattedRunTime);
   };
 
   const run = async <T extends boolean>(
