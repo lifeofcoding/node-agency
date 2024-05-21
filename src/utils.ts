@@ -2,6 +2,8 @@ import OpenAI from "openai";
 import { similarity as ml_distance_similarity } from "ml-distance";
 import { Agent } from "./agent";
 import PDF from "pdf-parse";
+import axios from "axios";
+import * as cheerio from "cheerio";
 
 type Agents = ReturnType<typeof Agent>[];
 
@@ -22,7 +24,7 @@ export const getEmbeddings = async (content: string) => {
   return embedding;
 };
 
-const totalPages: string[] = [];
+let totalPages: string[] = [];
 const pages: string[] = [];
 
 const isValidLink = (link: string) => {
@@ -40,28 +42,71 @@ const isValidLink = (link: string) => {
   );
 };
 
+const cleanSourceText = (text: string) => {
+  return text
+    .trim()
+    .replace(/(\n){4,}/g, "\n\n\n")
+    .replace(/\n\n/g, " ")
+    .replace(/ {3,}/g, "  ")
+    .replace(/\t/g, "")
+    .replace(/\n+(\s*\n)*/g, "\n");
+};
+
 const crawlWebsite = async (
   url: string,
   depth: number,
   currentDepth = 0
 ): Promise<string[]> => {
   try {
-    const response = await fetch(url);
-    const content = await response.text();
-    const body = content
-      .match(/<body[^>]*>[\s\S]*<\/body>/gi)
-      ?.map((b) => b)[0]!;
-    const links = content.match(/href="([^"]*)"/g);
-    const newPages =
-      links
-        ?.map((link) => link.replace('href="', "").replace('"', ""))
-        .filter((link) => isValidLink(link)) || [];
+    const domain = new URL(url).origin;
+    const response = await axios.get(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/109.0",
+      },
+    });
+    const $ = cheerio.load(response.data);
 
-    if (newPages) {
-      totalPages.push(...newPages);
+    const body = $("body").text();
+
+    const links = $("a")
+      .map((_, el) => domain + $(el).attr("href"))
+      .get();
+
+    function onlyUnique(value: string, index: number, array: string[]) {
+      return array.indexOf(value) === index;
     }
 
-    pages.push(onlyAplhaNumeric(stripHtml(body)));
+    const unique = links.filter(onlyUnique);
+    const newPages = unique.filter((link) => isValidLink(link)) || [];
+
+    const filteredLinks = newPages.filter((link, idx) => {
+      try {
+        const domain = new URL(link).hostname;
+
+        if (link.includes(".pdf")) return false;
+
+        const excludeList = [
+          "google",
+          "facebook",
+          "twitter",
+          "instagram",
+          "youtube",
+          "tiktok",
+        ];
+        if (excludeList.some((site) => domain.includes(site))) return false;
+
+        return link.includes(domain);
+      } catch (e) {
+        return false;
+      }
+    });
+
+    if (newPages) {
+      totalPages = totalPages.concat(filteredLinks).filter(onlyUnique);
+    }
+
+    pages.push(cleanSourceText(body));
 
     if (currentDepth >= depth) {
       return pages;
@@ -84,8 +129,8 @@ const crawlWebsite = async (
 };
 
 const isPDF = (url: string) => url.endsWith(".pdf");
-const stripHtml = (html: string) => html.replace(/<[^>]*>?/gm, " ");
-const onlyAplhaNumeric = (text: string) => text.replace(/[^a-zA-Z0-9 ]/g, " ");
+// const stripHtml = (html: string) => html.replace(/<[^>]*>?/gm, " ");
+// const onlyAplhaNumeric = (text: string) => text.replace(/[^a-zA-Z0-9 ]/g, " ");
 const chunkText = (text: string, chunkSize: number) => {
   const chunks: string[] = [];
   const words = text
@@ -123,6 +168,8 @@ export const getContent = async (url: string) => {
   }
 
   const pages = await crawlWebsite(url, 10);
+
+  debugger;
 
   const chunks = chunkText(pages.join(" "), 800);
 

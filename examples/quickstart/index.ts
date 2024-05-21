@@ -83,7 +83,7 @@ const agency = Agency({
   memory: true,
   llm: new Model({
     OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
-    model: "gpt-3.5-turbo",
+    model: "gpt-4o-2024-05-13",
     parallelToolCalls: true,
   }),
   outFile: "output.txt",

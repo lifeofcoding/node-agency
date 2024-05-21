@@ -97,7 +97,7 @@ const agency = Agency({
   tasks: [researchTask, summaryTask],
   llm: new OpenAIModel({
     OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
-    model: "gpt-3.5-turbo",
+    model: "gpt-4o", // defaults to gpt-3.5-turbo
     parallelToolCalls: true,
   }),
 });

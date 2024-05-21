@@ -1,5 +1,4 @@
 import OpenAI from "openai";
-import Colors from "colors";
 import { callFunction, readableStreamAsyncIterable } from "../utils";
 import { Logger } from "../logger";
 
@@ -328,6 +327,7 @@ export class Model {
     const toolMessages: Message[] = [];
     const stream: ReadableStream<any> = new ReadableStream({
       async start(controller) {
+        let currentMessage = "";
         for await (const value of gptResponse) {
           const choice = value.choices[0];
 
@@ -403,19 +403,20 @@ export class Model {
             }
           } else if (delta.content != null) {
             controller.enqueue(value.choices[0].delta.content);
+            currentMessage += value.choices[0].delta.content;
           }
         }
 
+        if (currentMessage && !toolMessages.length) {
+          _this.history.push({
+            role: "assistant",
+            content: currentMessage,
+          });
+        }
+
         if (toolMessages.length) {
-          const allButLastToolMessage = toolMessages.slice(
-            0,
-            toolMessages.length - 1
-          );
-          const lastToolMessage = toolMessages[toolMessages.length - 1];
-          const newStream = await _this.callGPTStream(
-            [...messages, ...allButLastToolMessage, lastToolMessage],
-            tools
-          );
+          _this.history.push(...toolMessages);
+          const newStream = await _this.callGPTStream(_this.history, tools);
           for await (const newPart of newStream) {
             controller.enqueue(newPart);
           }

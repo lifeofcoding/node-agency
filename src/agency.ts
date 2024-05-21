@@ -59,7 +59,7 @@ export const Agency = function ({
 
     manager = Agent({
       role: "Supervising Manager",
-      goal: "Complete the task with the of agents, delegating tasks as needed. Please use the results from the agent to come up with the final curated result output.",
+      goal: "Complete the task with the of agents, delegating tasks as needed. The user can only see your final result, and no history of previous messages between agents/coworkers. So please include all necessary information when responding with your final result.",
       tools: getManagerTools(agents),
       model: llm,
     });
