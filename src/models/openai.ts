@@ -195,6 +195,7 @@ export class Model {
   async callStream(
     systemMessage: string,
     prompt: Message,
+    callback: (message: string) => void,
     tools?: OpenAI.Chat.Completions.ChatCompletionTool[],
     context?: string
   ): Promise<AsyncIterableIterator<string>> {
@@ -214,7 +215,7 @@ export class Model {
     ];
 
     try {
-      const message = await this.callGPTStream(messages, tools);
+      const message = await this.callGPTStream(messages, callback, tools);
 
       return message;
     } catch (error) {
@@ -241,7 +242,7 @@ export class Model {
     const toolMessage: Message = {
       role: "tool",
       tool_call_id: tool_call.id,
-      content: result,
+      content: JSON.stringify({ result }),
     };
 
     return toolMessage;
@@ -306,6 +307,7 @@ export class Model {
 
   async callGPTStream(
     messages: Messages,
+    callback: (message: string) => void,
     tools?: OpenAI.Chat.Completions.ChatCompletionTool[]
   ) {
     const gptResponse = await this.openai.chat.completions.create({
@@ -412,11 +414,16 @@ export class Model {
             role: "assistant",
             content: currentMessage,
           });
+          callback(currentMessage);
         }
 
         if (toolMessages.length) {
           _this.history.push(...toolMessages);
-          const newStream = await _this.callGPTStream(_this.history, tools);
+          const newStream = await _this.callGPTStream(
+            _this.history,
+            callback,
+            tools
+          );
           for await (const newPart of newStream) {
             controller.enqueue(newPart);
           }

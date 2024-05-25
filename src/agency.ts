@@ -16,19 +16,28 @@ import fs from "fs";
 type MemoryTrue = { memory: true };
 type MemoryFalse = { memory: false };
 type MemoryNotSet = { memory?: undefined };
+type ProcessHierarchical = { process: "hierarchical" };
+type ProcessSequential = { process: "sequential" };
+type ProcessNotSet = { process?: undefined };
 
 type AgencyProps = {
   agents: ReturnType<typeof Agent>[];
   tasks: ReturnType<typeof Task>[];
-  llm: OpenAIModel;
+  llm?: OpenAIModel;
   process?: "sequential" | "hierarchical";
   memory?: boolean;
+  humanFeedback?: boolean;
   outFile?: string;
 } & (
   | (MemoryTrue & { resources?: string[] })
   | (MemoryFalse & { resources?: never })
   | (MemoryNotSet & { resources?: never })
-);
+) &
+  (
+    | (ProcessHierarchical & { llm: OpenAIModel })
+    | (ProcessSequential & { llm?: never })
+    | (ProcessNotSet & { llm: OpenAIModel })
+  );
 
 type UserMessage = {
   role: "user" | "assistant";
@@ -45,6 +54,7 @@ export const Agency = function ({
   process = "hierarchical",
   memory = false,
   resources,
+  humanFeedback = true,
   outFile,
 }: AgencyProps) {
   let manager: ReturnType<typeof Agent> | undefined;
@@ -59,16 +69,14 @@ export const Agency = function ({
 
     manager = Agent({
       role: "Supervising Manager",
-      goal: "Complete the task with the of agents, delegating tasks as needed. The user can only see your final result, and no history of previous messages between agents/coworkers. So please include all necessary information when responding with your final result.",
-      tools: getManagerTools(agents),
+      goal: "Complete the task with the of agents, delegating tasks as needed. Please use the content from tool calls to come up with your final response.",
+      tools: getManagerTools(agents, humanFeedback),
       model: llm,
     });
 
     if (store) {
       manager.memory(store);
     }
-  } else {
-    manager = undefined;
   }
 
   if (store) {
@@ -110,7 +118,8 @@ export const Agency = function ({
     const startTime = new Date().getTime();
     for (const task of tasks) {
       const coworkerTools = getCoworkerTools(
-        agents.filter((agent) => agent.role !== task.agent?.role)
+        agents.filter((agent) => agent.role !== task.agent?.role),
+        humanFeedback
       );
       const out = await task.execute({
         agent: manager,

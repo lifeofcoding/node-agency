@@ -16,6 +16,7 @@ This has very basic agent capabilities, and is nowhere near as advanced as many 
 - Asynchronous Tool Calling
 - Sharing of Context between agents
 - Short Term Memory (RAG)
+- Have agents ask for feedback on planning and next steps.
 - Task delegation and communication between agents
 - Easily add PDF's & websites as resources
 - Easy Defining of custom tools (OpenAI model required, more support coming soon.)
@@ -32,12 +33,26 @@ import { Model as OllamaModel } from "node-agency/models/ollama";
 const SearchTool = async (searchTerms: string) => {
   console.log("Searching for AI advancements related to:", searchTerms);
   return JSON.stringify([
-    { id: 1, name: "Google Scholar", url: "https://scholar.google.com/" },
-    { id: 2, name: "ArXiv", url: "https://arxiv.org/" },
+    {
+      id: 1,
+      name: "Google Scholar",
+      url: "https://scholar.google.com/",
+      content:
+        "The latest OpenAI Sora Model shocks the internet with its capabilities. The model is capable of generating human-like video with minimal prompts. The model is expected to revolutionize the field of AI and video. The model is available on the OpenAI API.",
+    },
+    {
+      id: 2,
+      name: "ArXiv",
+      url: "https://arxiv.org/",
+      content:
+        "The latest Google release Gemini Pro 1.5 have 2 million token context window. They also release vemo for video generation that outputs 1080p long form video.",
+    },
     {
       id: 3,
       name: "Semantic Scholar",
       url: "https://www.semanticscholar.org/",
+      content:
+        "The latest advancements in AI include the release of the OpenAI Sora Model and the Google Gemini Pro 1.5. As well as new ChatGPTo multimodel from OpenAI. That can reason across multiple modalities.",
     },
   ]);
 };
@@ -115,6 +130,18 @@ agency.kickoff().then((response) => {
 const agency = Agency({
   agents: [researcher, writer],
   tasks: [researchTask, summaryTask],
+  process: "sequential",
+  memory: true,
+  outFile: "./output.txt",
+});
+```
+
+## Receive requests for your feedback from your agents (default)
+
+```
+const agency = Agency({
+  agents: [researcher, writer],
+  tasks: [researchTask, summaryTask],
   llm: new Model({
     OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
     model: "gpt-3.5-turbo",
@@ -122,6 +149,7 @@ const agency = Agency({
   }),
   process: "sequential",
   memory: true,
+  humanFeedback: true
 });
 ```
 

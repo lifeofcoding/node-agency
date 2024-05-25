@@ -4,6 +4,7 @@ import { Agent } from "./agent";
 import PDF from "pdf-parse";
 import axios from "axios";
 import * as cheerio from "cheerio";
+import readline from "readline";
 
 type Agents = ReturnType<typeof Agent>[];
 
@@ -169,8 +170,6 @@ export const getContent = async (url: string) => {
 
   const pages = await crawlWebsite(url, 10);
 
-  debugger;
-
   const chunks = chunkText(pages.join(" "), 800);
 
   return chunks;
@@ -296,10 +295,25 @@ export const callFunction = async (name: string, input: string) => {
   }
 };
 
+function askQuestion(query: string): Promise<string> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise((resolve) =>
+    rl.question(query + ": ", (ans) => {
+      rl.close();
+      resolve(ans);
+    })
+  );
+}
+
 export const getCoworkerTools = (
-  agents: Agents
+  agents: Agents,
+  humanFeedback: boolean
 ): OpenAI.Chat.Completions.ChatCompletionTool[] => {
-  const tools = [
+  const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     {
       type: "function",
       function: {
@@ -404,41 +418,105 @@ export const getCoworkerTools = (
     }
   });
 
+  if (humanFeedback) {
+    tools.push({
+      type: "function",
+      function: {
+        name: "human_feedback",
+        description: "Get the users feedback on next steps to take",
+        parameters: {
+          type: "object",
+          properties: {
+            question: {
+              type: "string",
+              description: "The question to ask the user for feedback",
+            },
+          },
+          required: ["question"],
+        },
+      },
+    });
+    registerTool("human_feedback", async (prompt) => {
+      try {
+        const { question } = JSON.parse(prompt);
+        return askQuestion(question);
+      } catch (e) {
+        console.warn("Error calling human_feedback", e);
+        if (e instanceof Error)
+          return "Error calling human_feedback: " + e.message;
+        return "Error calling human_feedback";
+      }
+    });
+    context["human_feedback"] = "";
+  }
+
   return tools as OpenAI.Chat.Completions.ChatCompletionTool[];
 };
 
 export const getManagerTools = (
-  agents: Agents
+  agents: Agents,
+  humanFeedback: boolean
 ): OpenAI.Chat.Completions.ChatCompletionTool[] => {
-  return agents.map((agent) => {
-    const toolName = agent.role.replace(/\s/g, "_").toLowerCase();
-
-    registerTool(toolName, agent.execute);
-    context[toolName] = "";
-
-    return {
-      type: "function",
-      function: {
-        name: toolName,
-        description: agent.goal,
-        parameters: {
-          type: "object",
-          properties: {
-            task: {
-              type: "string",
-              description: "Task for the agent to complete",
-            },
-            input: {
-              type: "string",
-              description:
-                "The required input for the Agent to complete their task",
-            },
+  const humanFeedBackTool: OpenAI.Chat.Completions.ChatCompletionTool = {
+    type: "function",
+    function: {
+      name: "human_feedback",
+      description: "Get the users feedback on next steps to take",
+      parameters: {
+        type: "object",
+        properties: {
+          question: {
+            type: "string",
+            description: "The question to ask the user for feedback",
           },
-          required: ["task", "input"],
         },
+        required: ["question"],
       },
-    };
-  });
+    },
+  };
+
+  const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = agents.map(
+    (agent) => {
+      const toolName = agent.role.replace(/\s/g, "_").toLowerCase();
+
+      registerTool(toolName, agent.execute);
+      context[toolName] = "";
+
+      return {
+        type: "function",
+        function: {
+          name: toolName,
+          description: agent.goal,
+          parameters: {
+            type: "object",
+            properties: {
+              task: {
+                type: "string",
+                description: "Task for the agent to complete",
+              },
+              input: {
+                type: "string",
+                description:
+                  "The required input for the Agent to complete their task",
+              },
+            },
+            required: ["task", "input"],
+          },
+        },
+      };
+    }
+  );
+
+  if (humanFeedback) {
+    registerTool("human_feedback", async (prompt) => {
+      const { question } = JSON.parse(prompt);
+      return askQuestion(question);
+    });
+    context["human_feedback"] = "";
+    tools.push(humanFeedBackTool);
+  }
+
+  return tools;
 };
 
 export const generateOutput = (

@@ -27,6 +27,62 @@ const Agent = function ({ role, goal, tools, model }: AgentProps) {
 
   model = model || new OpenAIModel();
   let vectorStore: VectorStoreType = null;
+
+  const getShortTermMemory = async (prompt: string, currentTask: string) => {
+    if (vectorStore && currentTask) {
+      const embeddings = await getEmbeddings(currentTask);
+      const em = embeddings.data.map((e) => e.embedding);
+      const vectors = vectorStore.similaritySearchVectorWithScore(em[0], 3);
+      const hist = vectors.map((v) => {
+        const [content] = v;
+        return content.pageContent;
+      });
+
+      if (hist.length) {
+        Logger({
+          type: "info",
+          payload:
+            "Found memories for task: " +
+            currentTask +
+            "\n\nMemories:\n" +
+            hist.join("\n\n"),
+        });
+      }
+
+      prompt += hist.length
+        ? "\n\n## Previous History:\n\n" + hist.join("\n\n")
+        : "";
+
+      return prompt;
+    }
+
+    return prompt;
+  };
+
+  const saveShortTermMemories = async (
+    agentResults: string,
+    currentTask: string
+  ) => {
+    Logger({
+      type: "results",
+      payload: JSON.stringify({ role, agentResults }),
+    });
+
+    if (vectorStore) {
+      const embeddings = await getEmbeddings(agentResults);
+      const em = embeddings.data.map((e) => e.embedding);
+      vectorStore.addVectors(em, [
+        {
+          pageContent: agentResults,
+          metadata: {
+            role,
+            task: currentTask,
+          },
+        },
+      ]);
+    }
+  };
+
   return {
     role,
     goal,
@@ -41,13 +97,24 @@ const Agent = function ({ role, goal, tools, model }: AgentProps) {
       let newPrompt = prompt;
       let currentTask: string = "";
 
+      //combine tools
+      tools = tools?.concat(workerTools || []);
+
       try {
         const { task, input } = JSON.parse(prompt);
         currentTask = `${task}`;
         newPrompt = `Complete the following task: ${task}\n\n## Here is some context to help you with your task:\n${input}`;
 
         // attach planning prompt
-        newPrompt += `\n\n## Please start by planning your approach to the task, and the next steps your should take. If all steps have been completed, please indicate that you are done.`;
+        const containHumanFeedbackTool = tools?.some(
+          (tool) => tool.function.name === "human_feedback"
+        );
+
+        if (!containHumanFeedbackTool) {
+          newPrompt += `\n\n## Please start by planning your approach to the task, and the next steps your should take. If all steps have been completed, please indicate that you are done.`;
+        } else {
+          newPrompt += `\n\n## Please start by planning your approach to the task, and the next steps your should take. Verify which next steps you should take with the 'human_feedback' tool. If all steps have been completed, please indicate that you are done.`;
+        }
       } catch (e) {}
 
       Logger({
@@ -55,61 +122,22 @@ const Agent = function ({ role, goal, tools, model }: AgentProps) {
         payload: JSON.stringify({ role, systemMessage, newPrompt }),
       });
 
-      //combine tools
-      tools = tools?.concat(workerTools || []);
-
-      if (vectorStore && currentTask) {
-        const embeddings = await getEmbeddings(currentTask);
-        const em = embeddings.data.map((e) => e.embedding);
-        const vectors = vectorStore.similaritySearchVectorWithScore(em[0], 3);
-        const hist = vectors.map((v) => {
-          const [content] = v;
-          return content.pageContent;
-        });
-
-        if (hist.length) {
-          Logger({
-            type: "info",
-            payload:
-              "Found memories for task: " +
-              currentTask +
-              "\n\nMemories:\n" +
-              hist.join("\n\n"),
-          });
-        }
-
-        newPrompt += hist.length
-          ? "\n\n## Previous History:\n\n" + hist.join("\n\n")
-          : "";
-      }
+      // add memories to prompt
+      newPrompt = await getShortTermMemory(newPrompt, currentTask);
 
       const agentResults = await model.call(
         systemMessage,
         { role: "user", content: newPrompt },
-        tools,
+        currentTask
+          ? tools
+          : tools?.filter((tool) => tool.function.name !== "human_feedback"), // remove human feedback tool if executed diirectly
         getContext()
       );
       // model.selfReflected = 0;
 
       // create short term memory
-      if (vectorStore) {
-        const embeddings = await getEmbeddings(agentResults);
-        const em = embeddings.data.map((e) => e.embedding);
-        vectorStore.addVectors(em, [
-          {
-            pageContent: agentResults,
-            metadata: {
-              role,
-              task: currentTask,
-            },
-          },
-        ]);
-      }
+      saveShortTermMemories(agentResults, currentTask);
 
-      Logger({
-        type: "results",
-        payload: JSON.stringify({ role, agentResults }),
-      });
       return agentResults;
     },
     executeStream: async (prompt: string) => {
@@ -122,19 +150,8 @@ const Agent = function ({ role, goal, tools, model }: AgentProps) {
           newPrompt = `Complete the following task: ${task}\n\nHere is some context to help you:\n${input}`;
         } catch (e) {}
 
-        if (vectorStore && currentTask) {
-          const embeddings = await getEmbeddings(currentTask);
-          const em = embeddings.data.map((e) => e.embedding);
-          const vectors = vectorStore.similaritySearchVectorWithScore(em[0], 3);
-          const hist = vectors.map((v) => {
-            const [content] = v;
-            return content.pageContent;
-          });
-
-          newPrompt += hist.length
-            ? "\n\nHistory:\n\n" + hist.join("\n\n")
-            : "";
-        }
+        // add memories to prompt
+        newPrompt = await getShortTermMemory(newPrompt, currentTask);
 
         Logger({
           type: "agent",
@@ -144,7 +161,13 @@ const Agent = function ({ role, goal, tools, model }: AgentProps) {
         const agentResults = await model.callStream(
           systemMessage,
           { role: "user", content: newPrompt },
-          tools,
+          async (agentResults: string) => {
+            // create short term memory
+            saveShortTermMemories(agentResults, currentTask);
+          },
+          currentTask
+            ? tools
+            : tools?.filter((tool) => tool.function.name !== "human_feedback"), // remove human feedback tool if executed diirectly
           getContext()
         );
 
