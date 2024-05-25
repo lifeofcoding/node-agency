@@ -16,6 +16,7 @@ This has very basic agent capabilities, and is nowhere near as advanced as many 
 - Asynchronous Tool Calling
 - Sharing of Context between agents
 - Short Term Memory (RAG)
+- Advanced Chatbot Functionality with streaming support
 - Have agents ask for feedback on planning and next steps.
 - Task delegation and communication between agents
 - Easily add PDF's & websites as resources
