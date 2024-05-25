@@ -12,7 +12,7 @@ This has very basic agent capabilities, and is nowhere near as advanced as many 
 
 ## Features
 
-- Hierarchy & Seqential agent process
+- Hierarchy & Sequential agent process
 - Asynchronous Tool Calling
 - Sharing of Context between agents
 - Short Term Memory (RAG)
@@ -124,7 +124,7 @@ agency.kickoff().then((response) => {
 
 ```
 
-## Seqential Process
+## Sequential Process
 
 ```
 const agency = Agency({
