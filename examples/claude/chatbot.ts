@@ -1,7 +1,7 @@
 import "dotenv/config";
 import readline from "readline";
 import { Agency, Agent, Task, Tool } from "../../src/index";
-import { Model } from "../../src/models/openai";
+import { Model } from "../../src/models/claude";
 
 function askQuestion(query: string): Promise<string> {
   const rl = readline.createInterface({
@@ -101,8 +101,8 @@ const agency = Agency({
   ],
   memory: true,
   llm: new Model({
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
-    model: "gpt-3.5-turbo",
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || "",
+    model: "claude-3-opus-20240229",
     parallelToolCalls: true,
   }),
 });

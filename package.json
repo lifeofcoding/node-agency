@@ -1,6 +1,6 @@
 {
   "name": "node-agency",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "description": "A node package for building AI agents",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -32,6 +32,8 @@
     "example:chatbot": "npx ts-node examples/chatbot/index.ts",
     "example:ollama": "npx ts-node examples/ollama/index.ts",
     "example:sequential": "npx ts-node examples/sequential/index.ts",
+    "example:claude": "npx ts-node examples/claude/index.ts",
+    "example:claude:chatbot": "npx ts-node examples/claude/chatbot.ts",
     "npm:publish": "npm publish --access public"
   },
   "author": "Jimmy Rousseau (LifeOfCoding)",

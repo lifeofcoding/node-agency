@@ -1,3 +1,20 @@
+<div align="center">
+  <h1><strong>Node Agency</strong></h1>
+  <i>Build AI Agents with NodeJS</i><br>
+  
+  <code>npm install node-agency</code>
+</div>
+
+<div align="center">
+  <img alt="package version" src="https://img.shields.io/npm/v/node-agency?label=version">
+  <img alt="total downloads" src="https://img.shields.io/npm/dt/node-agency">
+  <br>
+  <a href="https://github.com/lifeofcoding/node-agency"><img alt="next-ws repo stars" src="https://img.shields.io/github/stars/lifeofcoding/node-agency?style=social"></a>
+  <a href="https://github.com/lifeofcoding"><img alt="lifeofcoding followers" src="https://img.shields.io/github/followers/lifeofcoding?style=social"></a>
+</div>
+
+---
+
 # Node Agency
 
 ⚠️ This project is in development and looking for contributors.
@@ -20,7 +37,7 @@ This has very basic agent capabilities, and is nowhere near as advanced as many 
 - Have agents ask for feedback on planning and next steps.
 - Task delegation and communication between agents
 - Easily add PDF's & websites as resources
-- Easy Defining of custom tools (OpenAI model required, more support coming soon.)
+- Easy Defining of custom tools (OpenAI or Claude model required, more support coming soon.)
 
 ## Quick Start
 
@@ -29,6 +46,7 @@ import "dotenv/config";
 import { Agency, Agent, Task, Tool } from "node-agency";
 import { Model as OpenAIModel } from "node-agency/models/openai";
 import { Model as OllamaModel } from "node-agency/models/ollama";
+import { Model as ClaudeModel } from "node-agency/models/claude";
 
 /* Create a simple tool */
 const SearchTool = async (searchTerms: string) => {
@@ -80,7 +98,9 @@ const researcher = Agent({
   role: "Senior Research Analyst",
   goal: "Uncover cutting-edge developments in AI and data science",
   tools: [searchTool],
-  // model: new OpenAIModel() // You can also pass a model here
+  model: new ClaudeModel({
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || ""
+  })
 });
 
 const writer = Agent({
@@ -237,6 +257,7 @@ agency
 ## Supported Models
 
 - OpenAI (Defaults to GPT 3.5-Turbo)
+- Anthropic Claude
 - Ollama (Tools not supported yet)
 - More coming soon.
 
@@ -247,6 +268,7 @@ agency
 - [x] Support Ollama Models / Open Source
 - [x] Short term memory (RAG)
 - [x] Chatbot RAG support
+- [x] Claude Support
 - [ ] Allow connecting to external vector store databases (Pinecone, Postgres, Supabase)
 - [ ] Long-term memory (SQLlite)
 - [ ] Ollama Function Calling Support
