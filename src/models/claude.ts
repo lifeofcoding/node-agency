@@ -234,8 +234,6 @@ export class Model {
       };
     });
 
-    debugger;
-
     try {
       const response = await axios.post(
         "https://api.anthropic.com/v1/messages",
@@ -285,7 +283,6 @@ export class Model {
 
       return message;
     } catch (error) {
-      debugger;
       console.error(error);
       console.debug("History: ", this.history);
       throw new Error("Failed to call Claude");
@@ -293,21 +290,17 @@ export class Model {
   }
 
   async processingToolCall(tool_call: ToolUseContent) {
-    const { name, input: args } = tool_call;
+    const { name, input } = tool_call;
 
     Logger({
       type: "function",
       payload: JSON.stringify({
         name,
-        params: args,
+        params: input,
       }),
     });
 
-    debugger;
-
-    const result = await callFunction(name, JSON.stringify(args));
-
-    debugger;
+    const result = await callFunction(name, JSON.stringify(input));
 
     const toolMessage: Message = {
       role: "user",
@@ -359,8 +352,10 @@ export class Model {
 
     const stream = response.data;
     let currentMessage = "";
-    let currentToolCall: ToolUseContent | null = null;
+    let currentToolCalls: ToolUseContent[] = [];
     const _this = this;
+
+    const toolMessages: Message[] = [];
 
     const readableStream = new ReadableStream({
       async start(controller) {
@@ -371,28 +366,99 @@ export class Model {
               const data = JSON.parse(line.slice(6));
               if (data.type === "content_block_delta") {
                 const text = data.delta.text;
-                controller.enqueue(text);
-                currentMessage += text;
-                callback(text);
-              } else if (data.type === "tool_use") {
-                currentToolCall = data.tool_use;
-                const toolResult = await _this.processingToolCall(
-                  currentToolCall!
-                );
-                _this.history.push(toolResult);
-                controller.enqueue(JSON.stringify(toolResult));
-                callback(JSON.stringify(toolResult));
+                if (text) {
+                  controller.enqueue(text);
+                  currentMessage += text;
+                  continue;
+                }
+
+                if (
+                  currentToolCalls.length > 0 &&
+                  data.delta.type === "input_json_delta"
+                ) {
+                  currentToolCalls[currentToolCalls.length - 1].input +=
+                    data.delta.partial_json;
+                }
+              } else if (data.type === "content_block_start") {
+                if (data.content_block.type === "tool_use") {
+                  currentToolCalls.push({
+                    ...data.content_block,
+                    input: "",
+                  });
+                }
+              } else if (data.type === "content_block_stop") {
+                // if (currentToolCalls.length > 0) {
+                //   const completedToolCall = currentToolCalls.pop();
+                //   if (completedToolCall) {
+                //     Logger({
+                //       type: "function",
+                //       payload: JSON.stringify({
+                //         name: completedToolCall.name,
+                //         params: completedToolCall.input,
+                //       }),
+                //     });
+                //     const toolMessage = await _this.processingToolCall({
+                //       ...completedToolCall,
+                //       input: JSON.parse(completedToolCall.input),
+                //     });
+                //     toolMessages.push(toolMessage);
+                //   }
+                // }
               }
             }
           }
         });
 
-        stream.on("end", () => {
-          if (currentMessage) {
+        stream.on("end", async () => {
+          if (currentToolCalls.length > 0) {
+            const toolRequestMessage: Message = {
+              role: "assistant",
+              content: [
+                {
+                  type: "text",
+                  text: currentMessage,
+                },
+                ...currentToolCalls.map((toolCall) => {
+                  return {
+                    type: "tool_use" as const,
+                    id: toolCall.id,
+                    name: toolCall.name,
+                    input: JSON.parse(toolCall.input),
+                  };
+                }),
+              ],
+            };
+
+            toolMessages.push(toolRequestMessage);
+
+            for (const toolCall of currentToolCalls) {
+              const toolMessage = await _this.processingToolCall({
+                ...toolCall,
+                input: JSON.parse(toolCall.input),
+              });
+              toolMessages.push(toolMessage);
+            }
+          }
+          if (currentMessage && toolMessages.length === 0) {
             _this.history.push({
               role: "assistant",
               content: currentMessage,
             });
+            callback(currentMessage);
+          }
+
+          if (toolMessages.length > 0) {
+            _this.history.push(...toolMessages);
+
+            const newStream = await _this.callClaudeStream(
+              systemMessage,
+              _this.history,
+              callback,
+              tools
+            );
+            for await (const newPart of newStream) {
+              controller.enqueue(newPart);
+            }
           }
           controller.close();
         });

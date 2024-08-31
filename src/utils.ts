@@ -279,7 +279,6 @@ export const registerTool = (
 };
 
 export const callFunction = async (name: string, input: string) => {
-  debugger;
   try {
     const result = await tools[name](input);
     if (name in context) {

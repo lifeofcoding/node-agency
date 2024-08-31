@@ -1,7 +1,21 @@
 import "dotenv/config";
-import { Agency, Agent, Task, Tool } from "../../src/index";
-import { Model as AgentModel } from "../../src/models/claude";
-import { Model as ManagerModel } from "../../src/models/claude";
+import readline from "readline";
+import { Agency, Agent, Task, Tool, History } from "../../src/index";
+import { Model } from "../../src/models/claude";
+
+function askQuestion(query: string): Promise<string> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise((resolve) =>
+    rl.question(query, (ans) => {
+      rl.close();
+      resolve(ans);
+    })
+  );
+}
 
 /* Create a simple tool */
 const SearchTool = async (searchTerms: string) => {
@@ -53,14 +67,12 @@ const researcher = Agent({
   role: "Senior Research Analyst",
   goal: "Uncover cutting-edge developments in AI and data science",
   tools: [searchTool],
+  // model: new Model() // You can also pass a model here
 });
 
 const writer = Agent({
-  role: "Tech Content Strategist",
+  role: "Tech Content Strategis",
   goal: "Craft compelling content on tech advancements",
-  model: new AgentModel({
-    model: "claude-3-opus-20240229",
-  }),
 });
 
 /* Create Tasks */
@@ -83,11 +95,31 @@ const summaryTask = Task({
 const agency = Agency({
   agents: [researcher, writer],
   tasks: [researchTask, summaryTask],
-  llm: new ManagerModel(),
-  humanFeedback: false,
+  resources: [
+    "https://www.wbu.edu/academics/writing-center/documents/Converting%20Google%20and%20Word%20Docs.pdf",
+    "https://react.dev/reference/react",
+  ],
+  memory: true,
+  llm: new Model({
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || "",
+    model: "claude-3-opus-20240229",
+    parallelToolCalls: true,
+  }),
 });
 
-/* Kickoff the Agency */
-agency.kickoff().then((response) => {
-  console.log(response);
-});
+const start = () =>
+  askQuestion("Input:").then((response) => {
+    if (response === "exit") {
+      process.exit(0);
+    }
+    agency.executeStream(response).then(async (response) => {
+      for await (const part of response) {
+        process.stdout.write(part);
+      }
+      process.stdout.write("\n");
+
+      start();
+    });
+  });
+
+start();

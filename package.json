@@ -33,6 +33,7 @@
     "example:ollama": "npx ts-node examples/ollama/index.ts",
     "example:sequential": "npx ts-node examples/sequential/index.ts",
     "example:claude": "npx ts-node examples/claude/index.ts",
+    "example:claude:chatbot": "npx ts-node examples/claude/chatbot.ts",
     "npm:publish": "npm publish --access public"
   },
   "author": "Jimmy Rousseau (LifeOfCoding)",

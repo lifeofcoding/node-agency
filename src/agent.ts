@@ -142,7 +142,7 @@ const Agent = function ({ role, goal, tools, model }: AgentProps) {
       return agentResults;
     },
     executeStream: async (prompt: string) => {
-      if (model instanceof OpenAIModel) {
+      if ("callStream" in model) {
         let newPrompt = prompt;
         let currentTask: string = "";
         try {
