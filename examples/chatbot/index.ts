@@ -1,6 +1,6 @@
 import "dotenv/config";
 import readline from "readline";
-import { Agency, Agent, Task, Tool, History } from "../../src/index";
+import { Agency, Agent, Task, Tool } from "../../src/index";
 import { Model } from "../../src/models/openai";
 
 function askQuestion(query: string): Promise<string> {
