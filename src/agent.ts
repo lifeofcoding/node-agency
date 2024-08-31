@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { Model as OpenAIModel } from "./models/openai";
 import { Model as OllamaModel } from "./models/ollama";
+import { Model as ClaudeModel } from "./models/claude";
 import { getContext, VectorStore, getEmbeddings } from "./utils";
 import { Logger } from "./logger";
 type AgentProps =
@@ -8,7 +9,7 @@ type AgentProps =
       role: string;
       goal: string;
       tools?: OpenAI.Chat.Completions.ChatCompletionTool[];
-      model?: OpenAIModel;
+      model?: OpenAIModel | ClaudeModel;
     }
   | {
       role: string;

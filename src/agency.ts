@@ -10,6 +10,7 @@ import {
   generateOutput,
 } from "./utils";
 import { Model as OpenAIModel } from "./models/openai";
+import { Model as ClaudeModel } from "./models/claude";
 import colors from "colors";
 import fs from "fs";
 
@@ -23,7 +24,7 @@ type ProcessNotSet = { process?: undefined };
 type AgencyProps = {
   agents: ReturnType<typeof Agent>[];
   tasks: ReturnType<typeof Task>[];
-  llm?: OpenAIModel;
+  llm?: OpenAIModel | ClaudeModel;
   process?: "sequential" | "hierarchical";
   memory?: boolean;
   humanFeedback?: boolean;
@@ -37,6 +38,8 @@ type AgencyProps = {
     | (ProcessHierarchical & { llm: OpenAIModel })
     | (ProcessSequential & { llm?: never })
     | (ProcessNotSet & { llm: OpenAIModel })
+    | (ProcessHierarchical & { llm: ClaudeModel })
+    | (ProcessNotSet & { llm: ClaudeModel })
   );
 
 type UserMessage = {
@@ -187,6 +190,7 @@ export const Agency = function ({
       const currentToolCalls = manager.model.history.filter(
         (item) =>
           item.role === "assistant" &&
+          "tool_calls" in item &&
           item.tool_calls &&
           item.tool_calls.length > 0
       );

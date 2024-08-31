@@ -1,3 +1,20 @@
+<div align="center">
+  <h1><strong>Node Agency</strong></h1>
+  <i>Build AI Agents with NodeJS</i><br>
+  
+  <code>npm install node-agency</code>
+</div>
+
+<div align="center">
+  <img alt="package version" src="https://img.shields.io/npm/v/node-agency?label=version">
+  <img alt="total downloads" src="https://img.shields.io/npm/dt/node-agency">
+  <br>
+  <a href="https://github.com/lifeofcoding/node-agency"><img alt="next-ws repo stars" src="https://img.shields.io/github/stars/lifeofcoding/node-agency?style=social"></a>
+  <a href="https://github.com/lifeofcoding"><img alt="lifeofcoding followers" src="https://img.shields.io/github/followers/lifeofcoding?style=social"></a>
+</div>
+
+---
+
 # Node Agency
 
 ⚠️ This project is in development and looking for contributors.
