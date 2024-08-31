@@ -187,23 +187,30 @@ export const Agency = function ({
         return { role: item.role, content: item.content };
       }) as OpenAIModel["history"];
 
-      const currentToolCalls = manager.model.history.filter(
-        (item) =>
-          item.role === "assistant" &&
-          "tool_calls" in item &&
-          item.tool_calls &&
-          item.tool_calls.length > 0
-      );
+      // const currentToolCalls = manager.model.history.filter(
+      //   (item) =>
+      //     // For OpenAI
+      //     (item.role === "assistant" &&
+      //       "tool_calls" in item &&
+      //       item.tool_calls &&
+      //       item.tool_calls.length > 0) ||
+      //     // For Claude
+      //     (item.role === "assistant" &&
+      //       item.content &&
+      //       typeof item.content === "object" &&
+      //       item.content.filter((c) => c.type === "tool_use").length > 0)
+      // );
 
-      const [firstHistoryItems, middleHistoryItems, lastHistoryItems] =
-        groupIntoNChunks(newHistory, 3);
+      // const [firstHistoryItems, middleHistoryItems, lastHistoryItems] =
+      //   groupIntoNChunks(newHistory, 3);
 
-      manager.model.history = [
-        ...firstHistoryItems,
-        ...currentToolCalls,
-        ...middleHistoryItems,
-        ...lastHistoryItems,
-      ];
+      // manager.model.history = [
+      //   ...firstHistoryItems,
+      //   ...currentToolCalls,
+      //   ...middleHistoryItems,
+      //   ...lastHistoryItems,
+      // ];
+      manager.model.history = newHistory;
     }
 
     return (await manager[executeMethod](prompt)) as T extends true
