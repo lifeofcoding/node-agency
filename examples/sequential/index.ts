@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { Agency, Agent, Task, Tool } from "../../src/index";
-import { Model } from "../../src/models/openai";
+// import { Model } from "../../src/models/openai";
 
 /* Create a simple tool */
 const SearchTool = async (searchTerms: string) => {
