@@ -213,9 +213,36 @@ export const Agency = function ({
       manager.model.history = newHistory;
     }
 
-    return (await manager[executeMethod](prompt)) as T extends true
+    const result = (await manager[executeMethod](prompt)) as T extends true
       ? Awaited<ReturnType<OpenAIModel["callStream"]>>
       : string;
+
+    // if history is passed, clear the history after execution
+    if (history) {
+      for (const agent of agents) {
+        if (agent.model) {
+          agent.model.history = [];
+        }
+      }
+    } else {
+      // pune if history too large
+      if (manager.model.history.length > 100) {
+        manager.model.history = manager.model.history.slice(
+          manager.model.history.length - 50
+        );
+      }
+
+      // prune each agent's history
+      for (const agent of agents) {
+        if (agent.model && agent.model.history.length > 100) {
+          agent.model.history = agent.model.history.slice(
+            agent.model.history.length - 50
+          );
+        }
+      }
+    }
+
+    return result;
   };
 
   const execute = async (prompt: string, history?: History) => {
