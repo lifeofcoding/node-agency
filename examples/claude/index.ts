@@ -85,6 +85,7 @@ const agency = Agency({
   tasks: [researchTask, summaryTask],
   llm: new ManagerModel(),
   humanFeedback: false,
+  selfReflect: false,
 });
 
 /* Kickoff the Agency */

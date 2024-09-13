@@ -29,6 +29,7 @@ type AgencyProps = {
   memory?: boolean;
   humanFeedback?: boolean;
   outFile?: string;
+  selfReflect?: boolean;
 } & (
   | (MemoryTrue & { resources?: string[] })
   | (MemoryFalse & { resources?: never })
@@ -59,6 +60,7 @@ export const Agency = function ({
   resources,
   humanFeedback = true,
   outFile,
+  selfReflect = true,
 }: AgencyProps) {
   let manager: ReturnType<typeof Agent> | undefined;
   let store: ReturnType<typeof VectorStore> | undefined;
@@ -69,6 +71,7 @@ export const Agency = function ({
 
   if (llm && process === "hierarchical") {
     llm.isManager = true;
+    llm.selfReflect = selfReflect;
 
     manager = Agent({
       role: "Supervising Manager",
@@ -83,7 +86,18 @@ export const Agency = function ({
   }
 
   if (store) {
-    agents.forEach((agent) => agent.memory(store));
+    agents.forEach((agent) => {
+      agent.memory(store);
+      if (agent.model) {
+        agent.model.selfReflect = selfReflect;
+      }
+    });
+  } else {
+    agents.forEach((agent) => {
+      if (agent.model) {
+        agent.model.selfReflect = selfReflect;
+      }
+    });
   }
 
   if (resources && !store) {
