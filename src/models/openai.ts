@@ -23,19 +23,25 @@ export class Model {
   isManager = false;
   model: OpenAI.Chat.Completions.ChatCompletionCreateParams["model"] =
     "gpt-3.5-turbo";
+  selfReflect: boolean = true;
+
   constructor(options?: {
     parallelToolCalls?: boolean;
     OPENAI_API_KEY?: string;
     model?: OpenAI.Chat.Completions.ChatCompletionCreateParams["model"];
+    selfReflect?: boolean;
   }) {
-    const { parallelToolCalls, OPENAI_API_KEY, model } = options || {};
+    const { parallelToolCalls, OPENAI_API_KEY, model, selfReflect } =
+      options || {};
     const openai = new OpenAI({
       apiKey: OPENAI_API_KEY || process.env.OPENAI_API_KEY,
     });
     this.openai = openai;
     this.parallelToolCalls = parallelToolCalls || false;
     this.model = model || this.model;
+    this.selfReflect = selfReflect ?? true;
   }
+
   async call(
     systemMessage: string,
     prompt: Message,
@@ -267,11 +273,12 @@ export class Model {
       } = gptResponse;
       const { message } = reply;
 
-      if (reflected && this.selfReflected >= 3) {
+      if (this.selfReflect && reflected && this.selfReflected >= 3) {
         Logger({ type: "warn", payload: "Self-Reflection Limit Reached\n\n" });
       }
 
       if (
+        this.selfReflect &&
         !reflected &&
         message.content &&
         this.selfReflected < 3 &&

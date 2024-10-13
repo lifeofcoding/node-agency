@@ -80,10 +80,14 @@ export class Model {
   history: Messages = [];
   selfReflected: number = 0;
   model: string = "llama3";
-  constructor(options?: { model?: string }) {
+  selfReflect: boolean = true;
+
+  constructor(options?: { model?: string; selfReflect?: boolean }) {
     const { model } = options || {};
     this.model = model || this.model;
+    this.selfReflect = options?.selfReflect ?? true;
   }
+
   async call(
     systemMessage: string,
     prompt: Message,
@@ -147,11 +151,16 @@ export class Model {
 
       const { message } = modelResponse;
 
-      if (reflected && this.selfReflected >= 3) {
+      if (this.selfReflect && reflected && this.selfReflected >= 3) {
         Logger({ type: "info", payload: "Self-Reflection Limit Reached\n\n" });
       }
 
-      if (!reflected && message.content && this.selfReflected < 3) {
+      if (
+        this.selfReflect &&
+        !reflected &&
+        message.content &&
+        this.selfReflected < 3
+      ) {
         Logger({
           type: "info",
           payload: `Self-Reflecting On Output (${this.selfReflected})...\n\n`,

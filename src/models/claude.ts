@@ -39,16 +39,20 @@ export class Model {
   parallelToolCalls = false;
   isManager = false;
   model: string = "claude-3-5-sonnet-20240620";
+  selfReflect: boolean = true;
 
   constructor(options?: {
     parallelToolCalls?: boolean;
     ANTHROPIC_API_KEY?: string;
     model?: string;
+    selfReflect?: boolean;
   }) {
-    const { parallelToolCalls, ANTHROPIC_API_KEY, model } = options || {};
+    const { parallelToolCalls, ANTHROPIC_API_KEY, model, selfReflect } =
+      options || {};
     this.apiKey = ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY || "";
     this.parallelToolCalls = parallelToolCalls || false;
     this.model = model || this.model;
+    this.selfReflect = selfReflect ?? true;
   }
 
   async call(
@@ -255,11 +259,16 @@ export class Model {
 
       const message = response.data.content as Message["content"];
 
-      if (reflected && this.selfReflected >= 3) {
+      if (this.selfReflect && reflected && this.selfReflected >= 3) {
         Logger({ type: "warn", payload: "Self-Reflection Limit Reached\n\n" });
       }
 
-      if (!reflected && !message[1] && this.selfReflected < 3) {
+      if (
+        this.selfReflect &&
+        !reflected &&
+        !message[1] &&
+        this.selfReflected < 3
+      ) {
         Logger({
           type: "info",
           payload: `Self-Reflecting On Output (${this.selfReflected})...\n\n`,
